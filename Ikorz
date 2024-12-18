@@ -1,0 +1,4 @@
+-- Ikorz Script - Simplified Version
+-- Created by AlexsiJujuLol
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/AlexsiJujuLol/GkiolazOrIkorz/main/ikorz.lua"))()
