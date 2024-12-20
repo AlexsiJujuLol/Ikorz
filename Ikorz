@@ -26,22 +26,3 @@ local function autoParry()
     for _, ball in pairs(workspace:GetChildren()) do
         if ball.Name == "BladeBall" and ball:FindFirstChild("Owner") and ball.Owner.Value ~= player then
             local ballPosition = ball.Position
-            local distance = (humanoidRootPart.Position - ballPosition).magnitude
-
-            if distance <= 10 then -- Adjust range for parry
-                game:GetService("VirtualUser"):CaptureController()
-                game:GetService("VirtualUser"):Button1Down(Vector2.new(0, 0))
-                task.wait(0.1)
-                game:GetService("VirtualUser"):Button1Up(Vector2.new(0, 0))
-                print("Parry triggered!")
-            end
-        end
-    end
-end
-
--- Connect auto parry function to RunService
-game:GetService("RunService").Stepped:Connect(function()
-    if autoParryEnabled then
-        autoParry()
-    end
-end)
