@@ -2,7 +2,7 @@
 -- Created by Ikorz
 
 -- Load Fluent UI Library
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kinlei/Fluent/master/source.lua"))()
+local library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local window = library.new("Ikorz - Blade Ball")
 
 -- Main Tab and Features Section
@@ -11,14 +11,9 @@ local section = mainTab:addSection("Auto Features")
 
 -- Toggles for Features
 local autoParryEnabled = false
-local autoDodgeEnabled = false
 
 section:addToggle("Auto Parry", nil, function(state)
     autoParryEnabled = state
-end)
-
-section:addToggle("Auto Dodge", nil, function(state)
-    autoDodgeEnabled = state
 end)
 
 -- Variables and Player Info
@@ -44,12 +39,9 @@ local function autoParry()
     end
 end
 
--- Auto Dodge Function
-local function autoDodge()
-    for _, ball in pairs(workspace:GetChildren()) do
-        if ball.Name == "BladeBall" and ball:FindFirstChild("Owner") and ball.Owner.Value ~= player then
-            local ballPosition = ball.Position
-            local distance = (humanoidRootPart.Position - ballPosition).magnitude
-
-            if distance <= 5 then -- Adjust range for dodge
-                humanoidRoot
+-- Connect auto parry function to RunService
+game:GetService("RunService").Stepped:Connect(function()
+    if autoParryEnabled then
+        autoParry()
+    end
+end)
