@@ -1,7 +1,4 @@
--- Load Fluent UI Library
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/main/main.lua"))()
-~local window = library.new("Ikorz - Blade Ball")
-~
+
 ~-- Main Tab and Features Section
 ~local mainTab = window:addPage("Main Features", 5012544693)
 ~local section = mainTab:addSection("Auto Features")
