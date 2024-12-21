@@ -1,250 +1,122 @@
+-- Server-Side Script
 
-~-- Main Tab and Features Section
-~local mainTab = window:addPage("Main Features", 5012544693)
-~local section = mainTab:addSection("Auto Features")
-~
-~-- Toggles for Features
-~local autoParryEnabled = false
-~section:addToggle("Auto Parry", nil, function(state)
-    autoParryEnabled = state
-end)
--- Variables
-local player = game:GetService("Players").LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart
--- Function to initialize and update the character and HumanoidRootPart
-local function updateCharacter()
-character = player.Character or player.CharacterAdded:Wait() -- Wait for the character to spawn
-    humanoidRootPart = character:WaitForChild("HumanoidRootPart", 10) -- Wait for up to 10 seconds for the HumanoidRootPart
-    if not humanoidRootPart then
-        warn("HumanoidRootPart not found! Check if the character has fully loaded.")
-    else
-        print("Character initialized successfully with HumanoidRootPart.")
-    end
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+
+-- Create RemoteEvent if it doesn't already exist
+local RemoteEvent = ReplicatedStorage:FindFirstChild("TestRemoteEvent")
+if not RemoteEvent then
+    RemoteEvent = Instance.new("RemoteEvent")
+    RemoteEvent.Name = "TestRemoteEvent"
+    RemoteEvent.Parent = ReplicatedStorage
 end
--- Connect character respawn to updateCharacter
-player.CharacterAdded:Connect(updateCharacter)
--- Initialize on script start
-updateCharacter()
 
--- Auto Parry Function
-local function autoParry()
-    if not humanoidRootPart then
-        warn("HumanoidRootPart is missing! Auto Parry cannot run.")
-        return
-    end
-    for _, ball in ipairs(workspace:GetDescendants()) do
-        if ball:IsA("Model") and ball.Name == "BladeBall" then
-            local owner = ball:FindFirstChild("Owner")
-            local ballPart = ball:FindFirstChildWhichIsA("BasePart")
-            if owner and ballPart and owner.Value ~= player then
-                local ballPosition = ballPart.Position
-                local distance = (humanoidRootPart.Position - ballPosition).Magnitude
-                if distance <= 10 then -- Adjust range for parry
-                    game:GetService("VirtualUser"):CaptureController()
-                    game:GetService("VirtualUser"):Button1Down(Vector2.new(0, 0))
-                    task.wait(0.1)
-                    game:GetService("VirtualUser"):Button1Up(Vector2.new(0, 0))
-                    print("Parry triggered!")
+-- Function to handle the parry logic
+local function handleParry(player)
+    -- Check if the player exists and has a character
+    if player and player.Character then
+        local character = player.Character
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        
+        if humanoidRootPart then
+            -- Print to indicate the parry has occurred
+            print(player.Name .. " performed a parry!")
+
+            -- Add particle effects to simulate the parry action
+            local effect = Instance.new("ParticleEmitter")
+            effect.Texture = "rbxassetid://your_particle_texture_id"  -- Add your own particle texture here
+            effect.Lifetime = NumberRange.new(0.5, 1)
+            effect.Rate = 100
+            effect.Parent = humanoidRootPart
+
+            -- Check for nearby BladeBall and deflect it
+            for _, ball in pairs(Workspace:GetChildren()) do
+                if ball:IsA("Model") and ball.Name == "BladeBall" then
+                    local ballPart = ball:FindFirstChild("BallPart")
+                    if ballPart then
+                        local distance = (humanoidRootPart.Position - ballPart.Position).Magnitude
+                        if distance <= 10 then  -- Adjust distance for your game
+                            -- Apply force to deflect the ball
+                            local direction = (ballPart.Position - humanoidRootPart.Position).unit
+                            local velocity = ballPart.Velocity.magnitude
+                            ballPart.Velocity = direction * velocity * 1.5  -- Deflect with force
+                            print("BladeBall deflected!")
+                        end
+                    end
                 end
             end
         end
     end
 end
--- Connect auto parry to RunService
-game:GetService("RunService").Stepped:Connect(function()
-    if autoParryEnabled then
-        local success, errorMessage = pcall(autoParry)
-        if not success then
-            warn("Error in Auto Parry: " .. errorMessage)
-        end
-    end
-end)er character respawn!")
-    else
-        print("Character and HumanoidRootPart updated successfully!")
-    end
-~end
-~
-~-- Listen for character respawn and update variables
-~player.CharacterAdded:Connect(updateCharacter)
-~
-~-- Initialize HumanoidRootPart on script start
-~updateCharacter()
-~
-~-- Auto Parry Function
-~local function autoParry()
-~    if not humanoidRootPart then return end -- Ensure HumanoidRootPart is available
-~
-~    for _, ball in ipairs(workspace:GetDescendants()) do
-~        -- Check if the object is a BladeBall and belongs to another player
-~        if ball:IsA("Model") and ball.Name == "BladeBall" then
-~            local owner = ball:FindFirstChild("Owner")
-~            local ballPart = ball:FindFirstChildWhichIsA("BasePart")
-~            
-~            if owner and ballPart and owner.Value ~= player then
-~                local ballPosition = ballPart.Position
-~                local distance = (humanoidRootPart.Position - ballPosition).Magnitude
-~
-~                if distance <= 10 then -- Adjust range for parry
-~                    game:GetService("VirtualUser"):CaptureController()
-~                    game:GetService("VirtualUser"):Button1Down(Vector2.new(0, 0))
-~                    task.wait(0.1)
-~                    game:GetService("VirtualUser"):Button1Up(Vector2.new(0, 0))
-~                    print("Parry triggered!")
-~                end
-~            end
-~        end
-~    end
-~end
-~
-~-- Connect auto parry function to RunService
-~game:GetService("RunService").Stepped:Connect(function()
-~    if autoParryEnabled then
-~        pcall(autoParry) -- Ensure no errors stop the function
-~    end
-~end)    for _, ball in ipairs(workspace:GetDescendants()) do
-~        if ball:IsA("Model") and ball.Name == "BladeBall" then
-~            local owner = ball:FindFirstChild("Owner")
-~            local ballPart = ball:FindFirstChildWhichIsA("BasePart")
-~            
-~            if owner and ballPart and owner.Value ~= player then
-~                local ballPosition = ballPart.Position
-~                local distance = (humanoidRootPart.Position - ballPosition).Magnitude
-~
-~                if distance <= 10 then -- Adjust range for parry
-~                    game:GetService("VirtualUser"):CaptureController()
-~                    game:GetService("VirtualUser"):Button1Down(Vector2.new(0, 0))
-~                    task.wait(0.1)
-~                    game:GetService("VirtualUser"):Button1Up(Vector2.new(0, 0))
-~                    print("Parry triggered!")
-~                end
-~            end
-~        end
-~    end
-~end
-~
-~-- Connect auto parry function to RunService
-~game:GetService("RunService").Stepped:Connect(function()
-~    if autoParryEnabled then
-~        pcall(autoParry) -- Ensure no errors stop the function
-~    end
-~end)
-0 commit comments
-Comments
-0
- (0)
-section:addToggle("Auto Spam", nil, function(state)
-    autoSpamEnabled = state
-end)
 
-section:addToggle("AI Play", nil, function(state)
-    aiPlayEnabled = state
-end)
+-- Listen for RemoteEvent from client to trigger parry
+RemoteEvent.OnServerEvent:Connect(function(player, action)
+    print(player.Name .. " triggered action: " .. action)
 
-section:addSlider("Sensitivity", 0, 1, sensitivity, function(value)
-    sensitivity = value
-end)
-
--- Variables and Player Info
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 10) -- Wait for 10 seconds
-
--- Ensure humanoidRootPart exists
-if not humanoidRootPart then
-    warn("HumanoidRootPart not found")
-    return
-end
-
--- Aimbot Function
-local function aimbot()
-    -- Implement aimbot logic here
-end
-
--- Wall Hack Function
-local function wallHack()
-    -- Implement wall hack logic here
-end
-
--- Silent Aim Function
-local function silentAim()
-    -- Implement silent aim logic here
-end
-
--- Auto Parry Function
-local function autoParry()
-    -- Implement auto parry logic here
-end
-
--- Auto Spam Function
-local function autoSpam()
-    -- Implement auto spam logic here
-end
-
--- AI Play Function
-local function aiPlay()
-    -- Implement AI play logic here
-end
-
--- Connect functions to RunService
-game:GetService("RunService").Stepped:Connect(function()
-    if aimbotEnabled then
-        aimbot()
-    end
-    if wallHackEnabled then
-        wallHack()
-    end
-    if silentAimEnabled then
-        silentAim()
-    end
-    if autoParryEnabled then
-        autoParry()
-    end
-    if autoSpamEnabled then
-        autoSpam()
-    end
-    if aiPlayEnabled then
-        aiPlay()
+    -- Handle specific actions
+    if action == "Parry" then
+        handleParry(player)
     end
 end)
-    sensitivity = value
+
+-- Function to create and throw a BladeBall
+local function createBladeBall(player)
+    -- Create a BladeBall model
+    local bladeBall = Instance.new("Model")
+    bladeBall.Name = "BladeBall"
+    
+    -- Create the BasePart (the ball)
+    local ballPart = Instance.new("Part")
+    ballPart.Name = "BallPart"
+    ballPart.Shape = Enum.PartType.Ball
+    ballPart.Size = Vector3.new(2, 2, 2)
+    ballPart.Position = player.Character.HumanoidRootPart.Position + Vector3.new(0, 5, 0) -- Spawn it above the player
+    ballPart.Anchored = false
+    ballPart.CanCollide = true
+    ballPart.Parent = bladeBall
+
+    -- Add the owner of the ball
+    local owner = Instance.new("StringValue")
+    owner.Name = "Owner"
+    owner.Value = player.Name
+    owner.Parent = bladeBall
+    
+    -- Parent the BladeBall to the workspace
+    bladeBall.Parent = Workspace
+
+    -- Apply an initial velocity to the ball to simulate throwing
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.MaxForce = Vector3.new(10000, 10000, 10000)  -- Allow high velocity
+    bodyVelocity.Velocity = player.Character.HumanoidRootPart.CFrame.LookVector * 50  -- Forward velocity
+    bodyVelocity.Parent = ballPart
+end
+
+-- Example of creating and throwing a BladeBall every 5 seconds for a player
+game:GetService("Players").PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        wait(1)  -- Give time for the character to load
+        createBladeBall(player)  -- Create and throw the BladeBall
+    end)
 end)
 
--- Variables and Player Info
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 10) -- Wait for 10 seconds
+-- AI Player that throws BladeBalls periodically
+local function createAIBladeBall()
+    local aiPlayer = Instance.new("Model")
+    aiPlayer.Name = "AIPlayer"
+    local humanoid = Instance.new("Humanoid")
+    humanoid.Parent = aiPlayer
+    aiPlayer.Parent = Workspace
 
--- Ensure humanoidRootPart exists
-if not humanoidRootPart then
-    warn("HumanoidRootPart not found")
-    return
-end
-
--- Aimbot Function
-local function aimbot()
-    -- Implement aimbot logic here
-end
-
--- Wall Hack Function
-local function wallHack()
-    -- Implement wall hack logic here
-end
-
--- Silent Aim Function
-local function silentAim()
-    -- Implement silent aim logic here
-end
-
--- Connect functions to RunService
-game:GetService("RunService").Stepped:Connect(function()
-    if aimbotEnabled then
-        aimbot()
+    local function aiThrow()
+        createBladeBall(aiPlayer)
     end
-    if wallHackEnabled then
-        wallHack()
+
+    while true do
+        aiThrow()
+        wait(5)  -- Throw a new BladeBall every 5 seconds
     end
-    if silentAimEnabled then
-        silentAim()
-    end
-end)
+end
+
+-- Start the AI blade ball throw
+createAIBladeBall()
