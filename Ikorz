@@ -1,7 +1,5 @@
 -- Blade Ball Script with Fluent UI
 -- Created by Ikorz
--- Blade Ball Script with Fluent UI
--- Created by Ikorz
 
 -- Load Fluent UI Library
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/main/main.lua"))()
@@ -17,18 +15,66 @@ section:addToggle("Auto Parry", nil, function(state)
     autoParryEnabled = state
 end)
 
--- Player Variables and Initialization
+-- Variables
 local player = game:GetService("Players").LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart
 
--- Function to handle character initialization and respawn
+-- Function to initialize and update the character and HumanoidRootPart
 local function updateCharacter()
-    character = player.Character or player.CharacterAdded:Wait()
-    humanoidRootPart = character:WaitForChild("HumanoidRootPart", 10)
+    character = player.Character or player.CharacterAdded:Wait() -- Wait for the character to spawn
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart", 10) -- Wait for up to 10 seconds for the HumanoidRootPart
 
     if not humanoidRootPart then
-        warn("HumanoidRootPart not found after character respawn!")
+        warn("HumanoidRootPart not found! Check if the character has fully loaded.")
+    else
+        print("Character initialized successfully with HumanoidRootPart.")
+    end
+end
+
+-- Connect character respawn to updateCharacter
+player.CharacterAdded:Connect(updateCharacter)
+
+-- Initialize on script start
+updateCharacter()
+
+-- Auto Parry Function
+local function autoParry()
+    if not humanoidRootPart then
+        warn("HumanoidRootPart is missing! Auto Parry cannot run.")
+        return
+    end
+
+    for _, ball in ipairs(workspace:GetDescendants()) do
+        if ball:IsA("Model") and ball.Name == "BladeBall" then
+            local owner = ball:FindFirstChild("Owner")
+            local ballPart = ball:FindFirstChildWhichIsA("BasePart")
+
+            if owner and ballPart and owner.Value ~= player then
+                local ballPosition = ballPart.Position
+                local distance = (humanoidRootPart.Position - ballPosition).Magnitude
+
+                if distance <= 10 then -- Adjust range for parry
+                    game:GetService("VirtualUser"):CaptureController()
+                    game:GetService("VirtualUser"):Button1Down(Vector2.new(0, 0))
+                    task.wait(0.1)
+                    game:GetService("VirtualUser"):Button1Up(Vector2.new(0, 0))
+                    print("Parry triggered!")
+                end
+            end
+        end
+    end
+end
+
+-- Connect auto parry to RunService
+game:GetService("RunService").Stepped:Connect(function()
+    if autoParryEnabled then
+        local success, errorMessage = pcall(autoParry)
+        if not success then
+            warn("Error in Auto Parry: " .. errorMessage)
+        end
+    end
+end)er character respawn!")
     else
         print("Character and HumanoidRootPart updated successfully!")
     end
