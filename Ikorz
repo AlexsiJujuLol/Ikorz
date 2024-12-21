@@ -11,7 +11,6 @@ local section = mainTab:addSection("Auto Features")
 
 -- Toggles for Features
 local autoParryEnabled = false
-
 section:addToggle("Auto Parry", nil, function(state)
     autoParryEnabled = state
 end)
@@ -19,7 +18,7 @@ end)
 -- Variables and Player Info
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 10) -- Wait for 10 seconds
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 10)
 
 -- Ensure humanoidRootPart exists
 if not humanoidRootPart then
@@ -29,12 +28,14 @@ end
 
 -- Auto Parry Function
 local function autoParry()
-    for _, ball in pairs(workspace:GetChildren()) do
+    for _, ball in ipairs(workspace:GetDescendants()) do
         if ball:IsA("Model") and ball.Name == "BladeBall" then
             local owner = ball:FindFirstChild("Owner")
-            if owner and owner.Value ~= player then
-                local ballPosition = ball.Position
-                local distance = (humanoidRootPart.Position - ballPosition).magnitude
+            local ballPart = ball:FindFirstChildWhichIsA("BasePart")
+            
+            if owner and ballPart and owner.Value ~= player then
+                local ballPosition = ballPart.Position
+                local distance = (humanoidRootPart.Position - ballPosition).Magnitude
 
                 if distance <= 10 then -- Adjust range for parry
                     game:GetService("VirtualUser"):CaptureController()
@@ -51,6 +52,6 @@ end
 -- Connect auto parry function to RunService
 game:GetService("RunService").Stepped:Connect(function()
     if autoParryEnabled then
-        autoParry()
+        pcall(autoParry) -- Ensure no errors stop the function
     end
 end)
