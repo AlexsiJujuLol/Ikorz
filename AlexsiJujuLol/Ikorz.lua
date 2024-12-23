@@ -12,21 +12,18 @@ local parry_delay = 0.3
 local parry_duration = 0.8
 local cooldown = false
 
--- Function to detect enemies within range
-local function detectEnemies()
-    local enemies = {}
+-- Function to detect balls within range
+local function detectBalls()
+    local balls = {}
     for _, obj in pairs(workspace:GetChildren()) do
-        if obj:IsA("Model") and obj:FindFirstChild("HumanoidRootPart") then
-            local humanoid = obj:FindFirstChildOfClass("Humanoid")
-            if humanoid and humanoid.Health > 0 then
-                local distance = (obj.HumanoidRootPart.Position - rootPart.Position).Magnitude
-                if distance <= parry_distance then
-                    table.insert(enemies, obj)
-                end
+        if obj:IsA("Part") and obj.Name == "Ball" then
+            local distance = (obj.Position - rootPart.Position).Magnitude
+            if distance <= parry_distance then
+                table.insert(balls, obj)
             end
         end
     end
-    return enemies
+    return balls
 end
 
 -- Function to perform parry
@@ -54,8 +51,8 @@ end
 -- Function to enable auto parry
 local function autoParry()
     while auto_parry_enabled do
-        local enemies = detectEnemies()
-        if #enemies > 0 then
+        local balls = detectBalls()
+        if #balls > 0 then
             performParry()
         end
         task.wait(parry_delay)  -- Add a slight delay to prevent it from constantly checking
