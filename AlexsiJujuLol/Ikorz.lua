@@ -88,8 +88,9 @@ function GetThreatsInRange(range)
     local threats_in_range = {}
     if not RootPart then return threats_in_range end
 
-    for _, threat in pairs(workspace:GetDescendants()) do -- Adjust based on your game's structure
-        if threat:IsA("BasePart") and threat.Name == "Blade" then -- Replace "Blade" with the actual threat name in your game
+    -- Adjust the loop for threats based on your game's structure
+    for _, threat in pairs(workspace:GetDescendants()) do
+        if threat:IsA("BasePart") and threat.Name == "Blade" then -- Replace "Blade" with the actual threat name
             local distance = (threat.Position - RootPart.Position).Magnitude
             if distance <= range then
                 table.insert(threats_in_range, threat)
@@ -115,6 +116,36 @@ task.spawn(function()
             local threats = GetThreatsInRange(parry_distance)
             for _, threat in pairs(threats) do
                 PerformParry(threat, parry_delay)
+            end
+        end
+        task.wait(0.1) -- Adjust the check interval as needed
+    end
+end)
+
+-- Score Controller
+local Score = 0 -- Variable to track the score
+
+-- Function to update the score
+function UpdateScore(amount)
+    Score = Score + amount
+    print("Current Score: ", Score)
+    -- Here you could update a UI label or similar to show the score to the player
+end
+
+-- Example of increasing score when a player parries a threat
+function ParryScoreUpdate(threat)
+    -- Logic to add score when a threat is parried
+    UpdateScore(10) -- Add 10 points for parrying a threat
+end
+
+-- Auto-Parry Logic with Score Update
+task.spawn(function()
+    while true do
+        if auto_parry_enabled and RootPart then
+            local threats = GetThreatsInRange(parry_distance)
+            for _, threat in pairs(threats) do
+                PerformParry(threat, parry_delay)
+                ParryScoreUpdate(threat) -- Update score after parrying a threat
             end
         end
         task.wait(0.1) -- Adjust the check interval as needed
