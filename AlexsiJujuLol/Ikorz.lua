@@ -264,3 +264,22 @@ ArsenalSection:NewToggle("Enable ESP Wall Hack", "Show ESP of enemies through wa
     esp_enabled = state
     ESPWallHack()  -- Refresh the ESP display when toggling
 end)
+
+-- Blade Ball Tab
+local BladeBallTab = Window:NewTab("Blade Ball Auto Parry")
+local BladeBallSection = BladeBallTab:NewSection("Auto Parry Settings")
+
+BladeBallSection:NewToggle("Enable Auto Parry", "Toggle auto parry on or off", function(state)
+    auto_parry_enabled = state
+    if auto_parry_enabled then
+        task.spawn(AutoParry)
+    end
+end)
+
+BladeBallSection:NewSlider("Auto Parry Distance", "Set the distance for auto parry", 1, 50, auto_parry_distance, function(value)
+    auto_parry_distance = value
+end)
+
+BladeBallSection:NewSlider("Spam Speed", "Set the speed for spam delay (seconds)", 0.1, 1, spam_speed, function(value)
+    spam_speed = value
+end)
