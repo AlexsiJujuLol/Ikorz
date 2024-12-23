@@ -35,13 +35,13 @@ end
 -- Detect the remote
 local remote, remoteType = findRemote(RemoteName)
 
--- Load Kavo UI Library (Ensure it loads correctly)
-local success, Library = pcall(function()
+-- Load Kavo UI Library
+local Library, errorMessage = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
 end)
 
-if not success then
-    warn("Failed to load Kavo UI Library. Script execution halted.")
+if not Library then
+    warn("Failed to load Kavo UI Library: " .. tostring(errorMessage))
     return
 end
 
