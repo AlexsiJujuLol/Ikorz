@@ -1,122 +1,120 @@
--- Server-Side Script
+-- Load Rayfield UI Library
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+-- Variables for Auto-Parry Configuration
+local parry_distance = 5 -- Default parry distance
+local parry_delay = 0.1 -- Default parry delay
+local auto_parry_enabled = false -- Auto-parry toggle
 
--- Create RemoteEvent if it doesn't already exist
-local RemoteEvent = ReplicatedStorage:FindFirstChild("TestRemoteEvent")
-if not RemoteEvent then
-    RemoteEvent = Instance.new("RemoteEvent")
-    RemoteEvent.Name = "TestRemoteEvent"
-    RemoteEvent.Parent = ReplicatedStorage
-end
+-- Initialize Rayfield Window
+local Window = Rayfield:CreateWindow({
+    Name = "Blade Ball Auto-Parry",
+    LoadingTitle = "Initializing...",
+    LoadingSubtitle = "Rayfield UI Loaded",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "BladeBallConfig", -- Change this to your desired folder name
+        FileName = "Settings"
+    }
+})
 
--- Function to handle the parry logic
-local function handleParry(player)
-    -- Check if the player exists and has a character
-    if player and player.Character then
-        local character = player.Character
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        
-        if humanoidRootPart then
-            -- Print to indicate the parry has occurred
-            print(player.Name .. " performed a parry!")
+-- Create Auto-Parry Tab
+local Tab = Window:CreateTab("Auto-Parry Settings", 4483362458) -- Replace with your desired icon ID
 
-            -- Add particle effects to simulate the parry action
-            local effect = Instance.new("ParticleEmitter")
-            effect.Texture = "rbxassetid://your_particle_texture_id"  -- Add your own particle texture here
-            effect.Lifetime = NumberRange.new(0.5, 1)
-            effect.Rate = 100
-            effect.Parent = humanoidRootPart
+-- Add a Slider for Parry Distance
+Tab:CreateSlider({
+    Name = "Parry Distance",
+    Range = {1, 10}, -- Adjust range if needed
+    Increment = 1,
+    Suffix = "Units",
+    Default = 5,
+    Callback = function(Value)
+        parry_distance = Value
+    end
+})
 
-            -- Check for nearby BladeBall and deflect it
-            for _, ball in pairs(Workspace:GetChildren()) do
-                if ball:IsA("Model") and ball.Name == "BladeBall" then
-                    local ballPart = ball:FindFirstChild("BallPart")
-                    if ballPart then
-                        local distance = (humanoidRootPart.Position - ballPart.Position).Magnitude
-                        if distance <= 10 then  -- Adjust distance for your game
-                            -- Apply force to deflect the ball
-                            local direction = (ballPart.Position - humanoidRootPart.Position).unit
-                            local velocity = ballPart.Velocity.magnitude
-                            ballPart.Velocity = direction * velocity * 1.5  -- Deflect with force
-                            print("BladeBall deflected!")
-                        end
-                    end
-                end
+-- Add a Slider for Parry Delay
+Tab:CreateSlider({
+    Name = "Parry Delay",
+    Range = {0.05, 1}, -- Adjust range if needed
+    Increment = 0.05,
+    Suffix = "Seconds",
+    Default = 0.1,
+    Callback = function(Value)
+        parry_delay = Value
+    end
+})
+
+-- Add a Toggle for Auto-Parry
+Tab:CreateToggle({
+    Name = "Enable Auto-Parry",
+    CurrentValue = false,
+    Callback = function(Value)
+        auto_parry_enabled = Value
+    end
+})
+
+-- Add a Button to Test Parry Functionality
+Tab:CreateButton({
+    Name = "Test Parry",
+    Callback = function()
+        print("Testing Parry with Distance:", parry_distance, "and Delay:", parry_delay)
+    end
+})
+
+-- Detect Local Player
+local LocalPlayer = game.Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+
+-- Function to Detect Threats (Blades or Balls)
+function GetThreatsInRange(range)
+    local threats_in_range = {}
+    local rootPart = Character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return threats_in_range end
+
+    for _, threat in pairs(workspace.Endure:GetChildren()) do -- Adjust based on your game's structure
+        if threat:IsA("BasePart") then
+            local distance = (threat.Position - rootPart.Position).Magnitude
+            if distance <= range then
+                table.insert(threats_in_range, threat)
             end
         end
     end
+    return threats_in_range
 end
 
--- Listen for RemoteEvent from client to trigger parry
-RemoteEvent.OnServerEvent:Connect(function(player, action)
-    print(player.Name .. " triggered action: " .. action)
-
-    -- Handle specific actions
-    if action == "Parry" then
-        handleParry(player)
-    end
-end)
-
--- Function to create and throw a BladeBall
-local function createBladeBall(player)
-    -- Create a BladeBall model
-    local bladeBall = Instance.new("Model")
-    bladeBall.Name = "BladeBall"
-    
-    -- Create the BasePart (the ball)
-    local ballPart = Instance.new("Part")
-    ballPart.Name = "BallPart"
-    ballPart.Shape = Enum.PartType.Ball
-    ballPart.Size = Vector3.new(2, 2, 2)
-    ballPart.Position = player.Character.HumanoidRootPart.Position + Vector3.new(0, 5, 0) -- Spawn it above the player
-    ballPart.Anchored = false
-    ballPart.CanCollide = true
-    ballPart.Parent = bladeBall
-
-    -- Add the owner of the ball
-    local owner = Instance.new("StringValue")
-    owner.Name = "Owner"
-    owner.Value = player.Name
-    owner.Parent = bladeBall
-    
-    -- Parent the BladeBall to the workspace
-    bladeBall.Parent = Workspace
-
-    -- Apply an initial velocity to the ball to simulate throwing
-    local bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.MaxForce = Vector3.new(10000, 10000, 10000)  -- Allow high velocity
-    bodyVelocity.Velocity = player.Character.HumanoidRootPart.CFrame.LookVector * 50  -- Forward velocity
-    bodyVelocity.Parent = ballPart
+-- Function to Perform Parry
+function PerformParry(threat, delay)
+    task.wait(delay)
+    print("Parried threat:", threat.Name)
+    -- Replace with actual parry logic, such as triggering a parry animation or effect
 end
 
--- Example of creating and throwing a BladeBall every 5 seconds for a player
-game:GetService("Players").PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        wait(1)  -- Give time for the character to load
-        createBladeBall(player)  -- Create and throw the BladeBall
-    end)
-end)
-
--- AI Player that throws BladeBalls periodically
-local function createAIBladeBall()
-    local aiPlayer = Instance.new("Model")
-    aiPlayer.Name = "AIPlayer"
-    local humanoid = Instance.new("Humanoid")
-    humanoid.Parent = aiPlayer
-    aiPlayer.Parent = Workspace
-
-    local function aiThrow()
-        createBladeBall(aiPlayer)
-    end
-
+-- Auto-Parry Logic (Runs Continuously)
+task.spawn(function()
     while true do
-        aiThrow()
-        wait(5)  -- Throw a new BladeBall every 5 seconds
+        if auto_parry_enabled then
+            local threats = GetThreatsInRange(parry_distance)
+            for _, threat in pairs(threats) do
+                PerformParry(threat, parry_delay)
+            end
+        end
+        task.wait(0.05) -- Adjust the check interval as needed
     end
-end
+end)
 
--- Start the AI blade ball throw
-createAIBladeBall()
+-- Notify User
+Rayfield:Notify({
+    Title = "Blade Ball Auto-Parry Loaded",
+    Content = "Customize your settings in the UI!",
+    Duration = 5,
+    Image = 4483362458, -- Replace with your desired icon ID
+    Actions = { -- Optional actions
+        Okay = {
+            Name = "Okay",
+            Callback = function()
+                print("UI Loaded Successfully!")
+            end
+        }
+    }
+})
