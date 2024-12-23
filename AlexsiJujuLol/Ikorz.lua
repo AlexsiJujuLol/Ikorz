@@ -26,7 +26,7 @@ Tab:CreateSlider({
     Name = "Parry Distance",
     Range = {1, 10}, -- Adjust range if needed
     Increment = 1,
-    Suffix = "Units",
+    Suffix = " Units",
     Default = 5,
     Callback = function(Value)
         parry_distance = Value
@@ -38,7 +38,7 @@ Tab:CreateSlider({
     Name = "Parry Delay",
     Range = {0.05, 1}, -- Adjust range if needed
     Increment = 0.05,
-    Suffix = "Seconds",
+    Suffix = " Seconds",
     Default = 0.1,
     Callback = function(Value)
         parry_delay = Value
@@ -88,8 +88,8 @@ function GetThreatsInRange(range)
     local threats_in_range = {}
     if not RootPart then return threats_in_range end
 
-    for _, threat in pairs(workspace.Endure:GetChildren()) do -- Adjust based on your game's structure
-        if threat:IsA("BasePart") then
+    for _, threat in pairs(workspace:GetDescendants()) do -- Adjust based on your game's structure
+        if threat:IsA("BasePart") and threat.Name == "Blade" then -- Replace "Blade" with the actual threat name in your game
             local distance = (threat.Position - RootPart.Position).Magnitude
             if distance <= range then
                 table.insert(threats_in_range, threat)
@@ -102,8 +102,10 @@ end
 -- Function to Perform Parry
 function PerformParry(threat, delay)
     task.wait(delay)
-    print("Parried threat:", threat.Name)
-    -- Replace with actual parry logic, such as triggering a parry animation or effect
+    if threat and threat.Parent then
+        print("Parried threat:", threat.Name)
+        -- Replace with actual parry logic, such as triggering animations or effects
+    end
 end
 
 -- Auto-Parry Logic (Runs Continuously)
@@ -115,7 +117,7 @@ task.spawn(function()
                 PerformParry(threat, parry_delay)
             end
         end
-        task.wait(0.05) -- Adjust the check interval as needed
+        task.wait(0.1) -- Adjust the check interval as needed
     end
 end)
 
