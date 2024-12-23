@@ -1,66 +1,51 @@
--- Load Rayfield UI Library
-local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
+-- Load Kavo UI Library
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
 
 -- Variables for Auto-Parry Configuration
 local parry_distance = 5 -- Default parry distance
 local parry_delay = 0.1 -- Default parry delay
 local auto_parry_enabled = false -- Auto-parry toggle
+local Score = 0 -- Score variable to track points
 
--- Initialize Rayfield Window
-local Window = Rayfield:CreateWindow({
-    Name = "Blade Ball Auto-Parry",
-    LoadingTitle = "Initializing...",
-    LoadingSubtitle = "Rayfield UI Loaded",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "BladeBallConfig", -- Change this to your desired folder name
-        FileName = "Settings"
-    }
-})
+-- Create Kavo Window
+local Window = Library.CreateLib("Blade Ball Auto-Parry", "DarkTheme")
 
 -- Create Auto-Parry Tab
-local Tab = Window:CreateTab("Auto-Parry Settings", 4483362458) -- Replace with your desired icon ID
+local AutoParryTab = Window:NewTab("Auto-Parry Settings")
 
--- Add a Slider for Parry Distance
-Tab:CreateSlider({
-    Name = "Parry Distance",
-    Range = {1, 10}, -- Adjust range if needed
-    Increment = 1,
-    Suffix = " Units",
-    Default = 5,
-    Callback = function(Value)
-        parry_distance = Value
-    end
-})
+-- Create Settings Section
+local SettingsSection = AutoParryTab:NewSection("Settings")
 
--- Add a Slider for Parry Delay
-Tab:CreateSlider({
-    Name = "Parry Delay",
-    Range = {0.05, 1}, -- Adjust range if needed
-    Increment = 0.05,
-    Suffix = " Seconds",
-    Default = 0.1,
-    Callback = function(Value)
-        parry_delay = Value
-    end
-})
+-- Add Slider for Parry Distance
+SettingsSection:NewSlider("Parry Distance", "Adjust the range for auto-parry detection", 10, 1, function(value)
+    parry_distance = value
+end)
 
--- Add a Toggle for Auto-Parry
-Tab:CreateToggle({
-    Name = "Enable Auto-Parry",
-    CurrentValue = false,
-    Callback = function(Value)
-        auto_parry_enabled = Value
-    end
-})
+-- Add Slider for Parry Delay
+SettingsSection:NewSlider("Parry Delay", "Adjust the delay for auto-parry", 1, 0.05, function(value)
+    parry_delay = value
+end)
 
--- Add a Button to Test Parry Functionality
-Tab:CreateButton({
-    Name = "Test Parry",
-    Callback = function()
-        print("Testing Parry with Distance:", parry_distance, "and Delay:", parry_delay)
-    end
-})
+-- Add Toggle for Auto-Parry
+SettingsSection:NewToggle("Enable Auto-Parry", "Toggle the auto-parry feature", function(state)
+    auto_parry_enabled = state
+end)
+
+-- Add a Button to Test Parry
+SettingsSection:NewButton("Test Parry", "Simulate a parry event", function()
+    print("Testing Parry with Distance:", parry_distance, "and Delay:", parry_delay)
+end)
+
+-- Create Score Section
+local ScoreSection = AutoParryTab:NewSection("Score")
+
+-- Add a Button to Reset Score
+ScoreSection:NewButton("Reset Score", "Reset the score to 0", function()
+    Score = 0
+    print("Score has been reset!")
+end)
+
+-- Functions for Auto-Parry and Threat Detection
 
 -- Detect Local Player
 local Players = game:GetService("Players")
@@ -68,15 +53,15 @@ local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local RootPart = nil
 
--- Function to Update Character and RootPart
+-- Update Character and RootPart
 local function UpdateCharacter()
     Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    RootPart = Character:WaitForChild("HumanoidRootPart")
+    RootPart = Character:WaitForChild("HumanoidRootPart", 5)
 end
 
 -- Listen for Character Respawn
 LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.1) -- Delay to ensure the character is fully loaded
+    task.wait(0.1)
     UpdateCharacter()
 end)
 
@@ -106,7 +91,15 @@ function PerformParry(threat, delay)
     if threat and threat.Parent then
         print("Parried threat:", threat.Name)
         -- Replace with actual parry logic, such as triggering animations or effects
+        UpdateScore(10) -- Add score for parrying a threat
     end
+end
+
+-- Function to Update Score
+function UpdateScore(amount)
+    Score = Score + amount
+    print("Current Score:", Score)
+    -- You can add code to display the score on a GUI here
 end
 
 -- Auto-Parry Logic (Runs Continuously)
@@ -121,49 +114,3 @@ task.spawn(function()
         task.wait(0.1) -- Adjust the check interval as needed
     end
 end)
-
--- Score Controller
-local Score = 0 -- Variable to track the score
-
--- Function to update the score
-function UpdateScore(amount)
-    Score = Score + amount
-    print("Current Score: ", Score)
-    -- Here you could update a UI label or similar to show the score to the player
-end
-
--- Example of increasing score when a player parries a threat
-function ParryScoreUpdate(threat)
-    -- Logic to add score when a threat is parried
-    UpdateScore(10) -- Add 10 points for parrying a threat
-end
-
--- Auto-Parry Logic with Score Update
-task.spawn(function()
-    while true do
-        if auto_parry_enabled and RootPart then
-            local threats = GetThreatsInRange(parry_distance)
-            for _, threat in pairs(threats) do
-                PerformParry(threat, parry_delay)
-                ParryScoreUpdate(threat) -- Update score after parrying a threat
-            end
-        end
-        task.wait(0.1) -- Adjust the check interval as needed
-    end
-end)
-
--- Notify User
-Rayfield:Notify({
-    Title = "Blade Ball Auto-Parry Loaded",
-    Content = "Customize your settings in the UI!",
-    Duration = 5,
-    Image = 4483362458, -- Replace with your desired icon ID
-    Actions = { -- Optional actions
-        Okay = {
-            Name = "Okay",
-            Callback = function()
-                print("UI Loaded Successfully!")
-            end
-        }
-    }
-})
