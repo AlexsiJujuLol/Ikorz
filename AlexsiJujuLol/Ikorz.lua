@@ -36,12 +36,12 @@ end
 local remote, remoteType = findRemote(RemoteName)
 
 -- Load Kavo UI Library
-local Library, errorMessage = pcall(function()
+local success, Library = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
 end)
 
-if not Library then
-    warn("Failed to load Kavo UI Library: " .. tostring(errorMessage))
+if not success then
+    warn("Failed to load Kavo UI Library: " .. tostring(Library))
     return
 end
 
@@ -83,8 +83,14 @@ local SettingsSection = SettingsTab:NewSection("Remote Interaction")
 -- Fire Server Button
 SettingsSection:NewButton("Fire RemoteEvent", "Send a test event to the server", function()
     if remoteType == "RemoteEvent" and remote then
-        remote:FireServer("Message from " .. LocalPlayer.Name)
-        print("RemoteEvent fired to server.")
+        local success, result = pcall(function()
+            remote:FireServer("Message from " .. LocalPlayer.Name)
+        end)
+        if success then
+            print("RemoteEvent fired to server.")
+        else
+            warn("Failed to fire RemoteEvent:", result)
+        end
     else
         warn("RemoteEvent not found or invalid.")
     end
@@ -96,7 +102,6 @@ SettingsSection:NewButton("Call RemoteFunction", "Send a request to the server a
         local success, result = pcall(function()
             return remote:InvokeServer("Request from " .. LocalPlayer.Name)
         end)
-
         if success then
             print("Server Response:", result)
         else
@@ -113,13 +118,25 @@ task.spawn(function()
         if auto_parry_enabled then
             print("Checking threats for auto-parry...") -- Debugging message
 
-            -- Replace this logic with actual detection of threats
-            local dummyThreat = { Name = "Blade", Position = LocalPlayer.Character and LocalPlayer.Character.PrimaryPart.Position or Vector3.new() }
-            local distance = (dummyThreat.Position - LocalPlayer.Character.PrimaryPart.Position).Magnitude
+            -- Ensure LocalPlayer and its character are valid before accessing PrimaryPart
+            local character = LocalPlayer.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                -- Now it's safe to access PrimaryPart (HumanoidRootPart)
+                local primaryPart = character.HumanoidRootPart
+                if primaryPart then
+                    -- Replace this logic with actual detection of threats
+                    local dummyThreat = { Name = "Blade", Position = primaryPart.Position + Vector3.new(parry_distance, 0, 0) }
+                    local distance = (dummyThreat.Position - primaryPart.Position).Magnitude
 
-            if distance <= parry_distance then
-                task.wait(parry_delay)
-                print("Auto-parried threat:", dummyThreat.Name)
+                    if distance <= parry_distance then
+                        task.wait(parry_delay)
+                        print("Auto-parried threat:", dummyThreat.Name)
+                    end
+                else
+                    warn("HumanoidRootPart is not available.")
+                end
+            else
+                warn("LocalPlayer's character or HumanoidRootPart is not available.")
             end
         end
         task.wait(0.1) -- Adjust the check interval as needed
