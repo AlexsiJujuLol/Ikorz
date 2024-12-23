@@ -46,6 +46,7 @@ local function autoParry()
     while auto_parry_enabled do
         local enemies = detectEnemies()
         if #enemies > 0 then
+            print("Enemies detected, performing parry...")
             performParry()
         end
         task.wait(parry_delay)
