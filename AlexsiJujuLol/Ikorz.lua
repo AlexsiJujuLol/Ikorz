@@ -1,116 +1,140 @@
--- Load Kavo UI Library
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+-- Services
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer -- Get the LocalPlayer
 
--- Variables for Auto-Parry Configuration
-local parry_distance = 5 -- Default parry distance
-local parry_delay = 0.1 -- Default parry delay
-local auto_parry_enabled = false -- Auto-parry toggle
-local Score = 0 -- Score variable to track points
+-- Ensure LocalPlayer is valid
+if not LocalPlayer then
+    warn("LocalPlayer not found! Script execution halted.")
+    return
+end
 
--- Create Kavo Window
+-- Remote name
+local RemoteName = "Channel" -- Replace with the actual name of the RemoteEvent or RemoteFunction
+
+-- Function to find a RemoteEvent or RemoteFunction
+local function findRemote(name)
+    local remote = ReplicatedStorage:FindFirstChild(name)
+    if remote then
+        if remote:IsA("RemoteEvent") then
+            print("Found RemoteEvent:", remote.Name)
+            return remote, "RemoteEvent"
+        elseif remote:IsA("RemoteFunction") then
+            print("Found RemoteFunction:", remote.Name)
+            return remote, "RemoteFunction"
+        else
+            warn("Found object is neither RemoteEvent nor RemoteFunction.")
+            return nil, nil
+        end
+    else
+        warn("No remote found with name:", name)
+        return nil, nil
+    end
+end
+
+-- Detect the remote
+local remote, remoteType = findRemote(RemoteName)
+
+-- Load Kavo UI Library (Ensure it loads correctly)
+local success, Library = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+end)
+
+if not success then
+    warn("Failed to load Kavo UI Library. Script execution halted.")
+    return
+end
+
+-- Initialize Kavo UI
 local Window = Library.CreateLib("Blade Ball Auto-Parry", "DarkTheme")
 
--- Create Auto-Parry Tab
-local AutoParryTab = Window:NewTab("Auto-Parry Settings")
+-- Create UI Tabs
+local MainTab = Window:NewTab("Main")
+local SettingsTab = Window:NewTab("Settings")
 
--- Create Settings Section
-local SettingsSection = AutoParryTab:NewSection("Settings")
+-- Main Tab Content
+local MainSection = MainTab:NewSection("Auto-Parry")
 
--- Add Slider for Parry Distance
-SettingsSection:NewSlider("Parry Distance", "Adjust the range for auto-parry detection", 10, 1, function(value)
-    parry_distance = value
-end)
+local auto_parry_enabled = false
+local parry_distance = 5
+local parry_delay = 0.1
 
--- Add Slider for Parry Delay
-SettingsSection:NewSlider("Parry Delay", "Adjust the delay for auto-parry", 1, 0.05, function(value)
-    parry_delay = value
-end)
-
--- Add Toggle for Auto-Parry
-SettingsSection:NewToggle("Enable Auto-Parry", "Toggle the auto-parry feature", function(state)
+-- Toggle for Auto-Parry
+MainSection:NewToggle("Enable Auto-Parry", "Toggle automatic parry functionality", function(state)
     auto_parry_enabled = state
+    print("Auto-Parry Enabled:", state)
 end)
 
--- Add a Button to Test Parry
-SettingsSection:NewButton("Test Parry", "Simulate a parry event", function()
-    print("Testing Parry with Distance:", parry_distance, "and Delay:", parry_delay)
+-- Slider for Parry Distance
+MainSection:NewSlider("Parry Distance", "Set the distance for parrying threats", 10, 1, function(value)
+    parry_distance = value
+    print("Parry Distance Set To:", value)
 end)
 
--- Create Score Section
-local ScoreSection = AutoParryTab:NewSection("Score")
-
--- Add a Button to Reset Score
-ScoreSection:NewButton("Reset Score", "Reset the score to 0", function()
-    Score = 0
-    print("Score has been reset!")
+-- Slider for Parry Delay
+MainSection:NewSlider("Parry Delay", "Set the delay before parrying threats", 1, 0.05, function(value)
+    parry_delay = value
+    print("Parry Delay Set To:", value)
 end)
 
--- Functions for Auto-Parry and Threat Detection
+-- Settings Tab Content
+local SettingsSection = SettingsTab:NewSection("Remote Interaction")
 
--- Detect Local Player
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local RootPart = nil
-
--- Update Character and RootPart
-local function UpdateCharacter()
-    Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    RootPart = Character:WaitForChild("HumanoidRootPart", 5)
-end
-
--- Listen for Character Respawn
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(0.1)
-    UpdateCharacter()
+-- Fire Server Button
+SettingsSection:NewButton("Fire RemoteEvent", "Send a test event to the server", function()
+    if remoteType == "RemoteEvent" and remote then
+        remote:FireServer("Message from " .. LocalPlayer.Name)
+        print("RemoteEvent fired to server.")
+    else
+        warn("RemoteEvent not found or invalid.")
+    end
 end)
 
--- Initialize Character
-UpdateCharacter()
+-- Invoke Server Button
+SettingsSection:NewButton("Call RemoteFunction", "Send a request to the server and get a response", function()
+    if remoteType == "RemoteFunction" and remote then
+        local success, result = pcall(function()
+            return remote:InvokeServer("Request from " .. LocalPlayer.Name)
+        end)
 
--- Function to Detect Threats (Blades or Balls)
-function GetThreatsInRange(range)
-    local threats_in_range = {}
-    if not RootPart then return threats_in_range end
-
-    -- Adjust the loop for threats based on your game's structure
-    for _, threat in pairs(workspace:GetDescendants()) do
-        if threat:IsA("BasePart") and threat.Name == "Blade" then -- Replace "Blade" with the actual threat name
-            local distance = (threat.Position - RootPart.Position).Magnitude
-            if distance <= range then
-                table.insert(threats_in_range, threat)
-            end
+        if success then
+            print("Server Response:", result)
+        else
+            warn("Failed to invoke RemoteFunction:", result)
         end
+    else
+        warn("RemoteFunction not found or invalid.")
     end
-    return threats_in_range
-end
-
--- Function to Perform Parry
-function PerformParry(threat, delay)
-    task.wait(delay)
-    if threat and threat.Parent then
-        print("Parried threat:", threat.Name)
-        -- Replace with actual parry logic, such as triggering animations or effects
-        UpdateScore(10) -- Add score for parrying a threat
-    end
-end
-
--- Function to Update Score
-function UpdateScore(amount)
-    Score = Score + amount
-    print("Current Score:", Score)
-    -- You can add code to display the score on a GUI here
-end
+end)
 
 -- Auto-Parry Logic (Runs Continuously)
 task.spawn(function()
     while true do
-        if auto_parry_enabled and RootPart then
-            local threats = GetThreatsInRange(parry_distance)
-            for _, threat in pairs(threats) do
-                PerformParry(threat, parry_delay)
+        if auto_parry_enabled then
+            print("Checking threats for auto-parry...") -- Debugging message
+
+            -- Replace this logic with actual detection of threats
+            local dummyThreat = { Name = "Blade", Position = LocalPlayer.Character and LocalPlayer.Character.PrimaryPart.Position or Vector3.new() }
+            local distance = (dummyThreat.Position - LocalPlayer.Character.PrimaryPart.Position).Magnitude
+
+            if distance <= parry_distance then
+                task.wait(parry_delay)
+                print("Auto-parried threat:", dummyThreat.Name)
             end
         end
         task.wait(0.1) -- Adjust the check interval as needed
     end
 end)
+
+-- Ensure the UI is visible after script runs
+Window:Show()
+
+-- Notify User
+Library:MakeNotification({
+    Title = "Blade Ball Auto-Parry Loaded",
+    Text = "Customize your settings in the Kavo UI!",
+    Duration = 5,
+    Callback = function()
+        print("Notification dismissed!")
+    end
+})
