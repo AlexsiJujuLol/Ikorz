@@ -49,6 +49,7 @@ local function autoParry()
             print("Enemies detected, performing parry...")
             performParry()
         end
+        print("Waiting for parry delay: " .. parry_delay)
         task.wait(parry_delay)
     end
 end
