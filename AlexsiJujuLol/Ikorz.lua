@@ -1,157 +1,132 @@
--- Services
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer -- Get the LocalPlayer
-
--- Ensure LocalPlayer is valid
-if not LocalPlayer then
-    warn("LocalPlayer not found! Script execution halted.")
-    return
-end
-
--- Remote name
-local RemoteName = "Channel" -- Replace with the actual name of the RemoteEvent or RemoteFunction
-
--- Function to find a RemoteEvent or RemoteFunction
-local function findRemote(name)
-    local remote = ReplicatedStorage:FindFirstChild(name)
-    if remote then
-        if remote:IsA("RemoteEvent") then
-            print("Found RemoteEvent:", remote.Name)
-            return remote, "RemoteEvent"
-        elseif remote:IsA("RemoteFunction") then
-            print("Found RemoteFunction:", remote.Name)
-            return remote, "RemoteFunction"
-        else
-            warn("Found object is neither RemoteEvent nor RemoteFunction.")
-            return nil, nil
-        end
-    else
-        warn("No remote found with name:", name)
-        return nil, nil
-    end
-end
-
--- Detect the remote
-local remote, remoteType = findRemote(RemoteName)
-
 -- Load Kavo UI Library
-local success, Library = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-end)
+local Kavo = loadstring(game:HttpGet('https://raw.githubusercontent.com/Kavo-UI/KavoUI/main/KavoUI'))()
 
-if not success then
-    warn("Failed to load Kavo UI Library: " .. tostring(Library))
+-- Ensure Kavo UI has loaded
+if not Kavo or type(Kavo) ~= "table" then
+    warn("Kavo UI did not load correctly.")
     return
 end
 
--- Initialize Kavo UI
-local Window = Library.CreateLib("Blade Ball Auto-Parry", "DarkTheme")
+-- Variables for Auto-Parry Configuration
+local parry_distance = 5 -- Default parry distance
+local parry_delay = 0.1 -- Default parry delay
+local auto_parry_enabled = false -- Auto-parry toggle
 
--- Create UI Tabs
-local MainTab = Window:NewTab("Main")
-local SettingsTab = Window:NewTab("Settings")
+-- Initialize Kavo UI Window
+local Window = Kavo:CreateWindow({
+    Name = "Blade Ball Auto-Parry",
+    LoadingTitle = "Initializing...",
+    LoadingSubtitle = "Kavo UI Loaded",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "BladeBallConfig", -- Change this to your desired folder name
+        FileName = "Settings"
+    }
+})
 
--- Main Tab Content
-local MainSection = MainTab:NewSection("Auto-Parry")
+-- Create Auto-Parry Tab
+local Tab = Window:CreateTab("Auto-Parry Settings", 1234567890) -- Replace with your desired icon ID
 
-local auto_parry_enabled = false
-local parry_distance = 5
-local parry_delay = 0.1
+-- Add a Slider for Parry Distance
+Tab:CreateSlider({
+    Name = "Parry Distance",
+    Range = {1, 10}, -- Adjust range if needed
+    Increment = 1,
+    Suffix = "Units",
+    Default = 5,
+    Callback = function(Value)
+        parry_distance = Value
+    end
+})
 
--- Toggle for Auto-Parry
-MainSection:NewToggle("Enable Auto-Parry", "Toggle automatic parry functionality", function(state)
-    auto_parry_enabled = state
-    print("Auto-Parry Enabled:", state)
-end)
+-- Add a Slider for Parry Delay
+Tab:CreateSlider({
+    Name = "Parry Delay",
+    Range = {0.05, 1}, -- Adjust range if needed
+    Increment = 0.05,
+    Suffix = "Seconds",
+    Default = 0.1,
+    Callback = function(Value)
+        parry_delay = Value
+    end
+})
 
--- Slider for Parry Distance
-MainSection:NewSlider("Parry Distance", "Set the distance for parrying threats", 10, 1, function(value)
-    parry_distance = value
-    print("Parry Distance Set To:", value)
-end)
+-- Add a Toggle for Auto-Parry
+Tab:CreateToggle({
+    Name = "Enable Auto-Parry",
+    CurrentValue = false,
+    Callback = function(Value)
+        auto_parry_enabled = Value
+    end
+})
 
--- Slider for Parry Delay
-MainSection:NewSlider("Parry Delay", "Set the delay before parrying threats", 1, 0.05, function(value)
-    parry_delay = value
-    print("Parry Delay Set To:", value)
-end)
+-- Add a Button to Test Parry Functionality
+Tab:CreateButton({
+    Name = "Test Parry",
+    Callback = function()
+        print("Testing Parry with Distance:", parry_distance, "and Delay:", parry_delay)
+    end
+})
 
--- Settings Tab Content
-local SettingsSection = SettingsTab:NewSection("Remote Interaction")
+-- Ensure LocalPlayer and Character are initialized
+local LocalPlayer = game.Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local rootPart = Character:WaitForChild("HumanoidRootPart") -- Make sure HumanoidRootPart exists
 
--- Fire Server Button
-SettingsSection:NewButton("Fire RemoteEvent", "Send a test event to the server", function()
-    if remoteType == "RemoteEvent" and remote then
-        local success, result = pcall(function()
-            remote:FireServer("Message from " .. LocalPlayer.Name)
-        end)
-        if success then
-            print("RemoteEvent fired to server.")
-        else
-            warn("Failed to fire RemoteEvent:", result)
+-- Function to Detect Threats (Blades or Balls)
+function GetThreatsInRange(range)
+    local threats_in_range = {}
+    if not rootPart then return threats_in_range end
+
+    -- Ensure we are getting objects from the correct location
+    local EndureModel = workspace:FindFirstChild("Endure")
+    if EndureModel then
+        for _, threat in pairs(EndureModel:GetChildren()) do
+            if threat:IsA("BasePart") then
+                local distance = (threat.Position - rootPart.Position).Magnitude
+                if distance <= range then
+                    table.insert(threats_in_range, threat)
+                end
+            end
         end
     else
-        warn("RemoteEvent not found or invalid.")
+        print("No 'Endure' model found in workspace.")
     end
-end)
+    return threats_in_range
+end
 
--- Invoke Server Button
-SettingsSection:NewButton("Call RemoteFunction", "Send a request to the server and get a response", function()
-    if remoteType == "RemoteFunction" and remote then
-        local success, result = pcall(function()
-            return remote:InvokeServer("Request from " .. LocalPlayer.Name)
-        end)
-        if success then
-            print("Server Response:", result)
-        else
-            warn("Failed to invoke RemoteFunction:", result)
-        end
-    else
-        warn("RemoteFunction not found or invalid.")
-    end
-end)
+-- Function to Perform Parry
+function PerformParry(threat, delay)
+    task.wait(delay)
+    print("Parried threat:", threat.Name)
+    -- Replace with actual parry logic, such as triggering a parry animation or effect
+end
 
 -- Auto-Parry Logic (Runs Continuously)
 task.spawn(function()
     while true do
         if auto_parry_enabled then
-            print("Checking threats for auto-parry...") -- Debugging message
-
-            -- Ensure LocalPlayer and its character are valid before accessing PrimaryPart
-            local character = LocalPlayer.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                -- Now it's safe to access PrimaryPart (HumanoidRootPart)
-                local primaryPart = character.HumanoidRootPart
-                if primaryPart then
-                    -- Replace this logic with actual detection of threats
-                    local dummyThreat = { Name = "Blade", Position = primaryPart.Position + Vector3.new(parry_distance, 0, 0) }
-                    local distance = (dummyThreat.Position - primaryPart.Position).Magnitude
-
-                    if distance <= parry_distance then
-                        task.wait(parry_delay)
-                        print("Auto-parried threat:", dummyThreat.Name)
-                    end
-                else
-                    warn("HumanoidRootPart is not available.")
-                end
-            else
-                warn("LocalPlayer's character or HumanoidRootPart is not available.")
+            local threats = GetThreatsInRange(parry_distance)
+            for _, threat in pairs(threats) do
+                PerformParry(threat, parry_delay)
             end
         end
-        task.wait(0.1) -- Adjust the check interval as needed
+        task.wait(0.05) -- Adjust the check interval as needed
     end
 end)
 
--- Ensure the UI is visible after script runs
-Window:Show()
-
 -- Notify User
-Library:MakeNotification({
+Kavo:Notify({
     Title = "Blade Ball Auto-Parry Loaded",
-    Text = "Customize your settings in the Kavo UI!",
+    Content = "Customize your settings in the UI!",
     Duration = 5,
-    Callback = function()
-        print("Notification dismissed!")
-    end
+    Image = 1234567890, -- Replace with your desired icon ID
+    Actions = { -- Optional actions
+        Okay = {
+            Name = "Okay",
+            Callback = function()
+                print("UI Loaded Successfully!")
+            end
+        }
+    }
 })
