@@ -63,18 +63,34 @@ Tab:CreateButton({
 })
 
 -- Detect Local Player
-local LocalPlayer = game.Players.LocalPlayer
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local RootPart = nil
+
+-- Function to Update Character and RootPart
+local function UpdateCharacter()
+    Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    RootPart = Character:WaitForChild("HumanoidRootPart")
+end
+
+-- Listen for Character Respawn
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.1) -- Delay to ensure the character is fully loaded
+    UpdateCharacter()
+end)
+
+-- Initialize Character
+UpdateCharacter()
 
 -- Function to Detect Threats (Blades or Balls)
 function GetThreatsInRange(range)
     local threats_in_range = {}
-    local rootPart = Character:FindFirstChild("HumanoidRootPart")
-    if not rootPart then return threats_in_range end
+    if not RootPart then return threats_in_range end
 
     for _, threat in pairs(workspace.Endure:GetChildren()) do -- Adjust based on your game's structure
         if threat:IsA("BasePart") then
-            local distance = (threat.Position - rootPart.Position).Magnitude
+            local distance = (threat.Position - RootPart.Position).Magnitude
             if distance <= range then
                 table.insert(threats_in_range, threat)
             end
@@ -93,7 +109,7 @@ end
 -- Auto-Parry Logic (Runs Continuously)
 task.spawn(function()
     while true do
-        if auto_parry_enabled then
+        if auto_parry_enabled and RootPart then
             local threats = GetThreatsInRange(parry_distance)
             for _, threat in pairs(threats) do
                 PerformParry(threat, parry_delay)
