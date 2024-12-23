@@ -108,3 +108,5 @@ game:GetService("StarterGui"):SetCore("SendNotification", {
     Text = "Customize your settings in the Kavo UI!",
     Duration = 5
 })
+
+print("Script executed successfully")
