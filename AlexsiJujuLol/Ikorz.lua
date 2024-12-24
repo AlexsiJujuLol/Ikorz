@@ -156,3 +156,60 @@ local function AutoParry()
         task.wait(spam_speed)  -- Control how often we check for balls to parry
     end
 end
+
+-- Create a Tab for "Arsenal"
+local Arsenal_Tab = Library_Window.Create_Tab({
+    name = 'Arsenal',
+    icon = 'rbxassetid://'
+})
+
+-- Create a Section for the "Arsenal" Tab
+local Arsenal_Section = Arsenal_Tab.Create_Section()
+
+-- Silent Aim Toggle in Arsenal tab
+local silent_aim_enabled = false
+
+local function Aimbot()
+    while silent_aim_enabled do
+        local closestEnemy = nil
+        local closestDistance = math.huge
+        for _, enemy in ipairs(game.Players:GetPlayers()) do
+            if enemy.Character and enemy ~= game.Players.LocalPlayer then
+                local humanoidRootPart = enemy.Character:FindFirstChild("HumanoidRootPart")
+                if humanoidRootPart then
+                    local distance = (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - humanoidRootPart.Position).Magnitude
+                    if distance < closestDistance then
+                        closestDistance = distance
+                        closestEnemy = enemy
+                    end
+                end
+            end
+        end
+
+        if closestEnemy then
+            local targetPosition = closestEnemy.Character.HumanoidRootPart.Position
+            local camera = workspace.CurrentCamera
+            local direction = (targetPosition - camera.CFrame.p).unit
+            local newCFrame = camera.CFrame * CFrame.new(direction * 100) -- silent aim adjustment
+            camera.CFrame = CFrame.lookAt(camera.CFrame.p, newCFrame.p)
+        end
+
+        wait(0.1)
+    end
+end
+
+-- Silent Aim Toggle UI
+local SilentAim_Toggle = Arsenal_Section.Create_Toggle({
+    name = 'Enable Silent Aim',
+    flag = 'Enable_Silent_Aim',
+    callback = function(state)
+        silent_aim_enabled = state
+        if silent_aim_enabled then
+            print('Silent Aim Enabled')
+            -- Start the Aimbot loop
+            task.spawn(Aimbot)
+        else
+            print('Silent Aim Disabled')
+        end
+    end
+})
