@@ -1,1 +1,6 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/AlexsiJujuLol/Ikorz/main/AlexsiJujuLol/Ikorz.lua
+-- Fetch the raw Lua code from the GitHub URL and execute it using loadstring
+local scriptURL = "https://raw.githubusercontent.com/AlexsiJujuLol/Ikorz/main/AlexsiJujuLol/Ikorz.lua"
+local scriptContent = game:HttpGet(scriptURL)
+
+-- Execute the fetched script
+loadstring(scriptContent)()
