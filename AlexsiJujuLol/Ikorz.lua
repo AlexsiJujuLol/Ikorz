@@ -41,25 +41,30 @@ end
 local auto_parry_enabled = false
 local auto_parry_distance = 10
 local spam_speed = 0.1
+local auto_parry_task = nil
 
 local function AutoParry()
-    while auto_parry_enabled do
-        if IsTarget() then
-            for _, Ball in pairs(Balls:GetChildren()) do
-                if VerifyBall(Ball) or VerifyDeathBall(Ball) then
-                    local Distance = (Ball.Position - Camera.CFrame.p).Magnitude
-                    local Velocity = (Ball.Position - Camera.CFrame.p).Magnitude / spam_speed
-                    local TimeToImpact = Distance / Velocity
-                    printDebug(string.format("Ball Distance: %.2f, Velocity: %.2f, Time to Impact: %.2f", Distance, Velocity, TimeToImpact))
+    if auto_parry_task then return end  -- Prevent multiple tasks
+    auto_parry_task = task.spawn(function()
+        while auto_parry_enabled do
+            if IsTarget() then
+                for _, Ball in pairs(Balls:GetChildren()) do
+                    if VerifyBall(Ball) or VerifyDeathBall(Ball) then
+                        local Distance = (Ball.Position - Camera.CFrame.p).Magnitude
+                        local Velocity = (Ball.Position - Camera.CFrame.p).Magnitude / spam_speed
+                        local TimeToImpact = Distance / Velocity
+                        printDebug(string.format("Ball Distance: %.2f, Velocity: %.2f, Time to Impact: %.2f", Distance, Velocity, TimeToImpact))
 
-                    if Distance <= auto_parry_distance and TimeToImpact <= 1 then
-                        Parry() -- Trigger auto parry
+                        if Distance <= auto_parry_distance and TimeToImpact <= 1 then
+                            Parry() -- Trigger auto parry
+                        end
                     end
                 end
             end
+            task.wait(spam_speed)  -- This controls the rate at which balls are checked for parrying.
         end
-        task.wait(spam_speed)  -- This controls the rate at which balls are checked for parrying.
-    end
+        auto_parry_task = nil  -- Reset task after loop finishes
+    end)
 end
 
 -- Humanoid Handling (For Death Balls or Parry Impact)
@@ -119,115 +124,6 @@ Balls.ChildAdded:Connect(function(Ball)
     end)
 end)
 
--- Fish Functions (Auto-play features)
-local auto_shake_enabled = false
-local auto_reel_enabled = false
-local auto_bait_enabled = false
-local auto_cast_enabled = false
-local shake_delay = 1
-local fast_shake_delay = 0.3
-local reel_delay = 0.5
-local bait_delay = 1
-local cast_delay = 2
-
-local function autoShake()
-    while auto_shake_enabled do
-        if auto_shake_enabled then
-            Remotes:WaitForChild("ShakeButtonPress"):Fire()
-        end
-        task.wait(shake_delay)
-    end
-end
-
-local function autoReel()
-    while auto_reel_enabled do
-        if auto_reel_enabled then
-            Remotes:WaitForChild("ReelButtonPress"):Fire()
-        end
-        task.wait(reel_delay)
-    end
-end
-
-local function autoBait()
-    while auto_bait_enabled do
-        if auto_bait_enabled then
-            Remotes:WaitForChild("BaitButtonPress"):Fire()
-        end
-        task.wait(bait_delay)
-    end
-end
-
-local function autoCast()
-    while auto_cast_enabled do
-        if auto_cast_enabled then
-            Remotes:WaitForChild("CastButtonPress"):Fire()
-        end
-        task.wait(cast_delay)
-    end
-end
-
--- Arsenal Aimbot Function with Silent Aim
-local silent_aim_enabled = false
-local esp_enabled = false
-local function Aimbot()
-    while true do
-        if silent_aim_enabled then
-            -- Find closest enemy and aim at them
-            local closestEnemy = nil
-            local closestDistance = math.huge
-            for _, enemy in ipairs(Players:GetPlayers()) do
-                if enemy.Character and enemy ~= Player then
-                    local humanoidRootPart = enemy.Character:FindFirstChild("HumanoidRootPart")
-                    if humanoidRootPart then
-                        local distance = (Player.Character.HumanoidRootPart.Position - humanoidRootPart.Position).Magnitude
-                        if distance < closestDistance then
-                            closestDistance = distance
-                            closestEnemy = enemy
-                        end
-                    end
-                end
-            end
-
-            -- Silent Aim Logic: Aim at the closest enemy without showing the real aim position
-            if closestEnemy then
-                local targetPosition = closestEnemy.Character.HumanoidRootPart.Position
-                local camera = Camera
-                local direction = (targetPosition - camera.CFrame.p).unit
-                local newCFrame = camera.CFrame * CFrame.new(direction * 100) -- silent aim adjustment
-                camera.CFrame = CFrame.lookAt(camera.CFrame.p, newCFrame.p)
-            end
-        end
-        task.wait(0.1)
-    end
-end
-
--- ESP Wall Hack (Showing enemy ESP through walls)
-local function ESPWallHack()
-    for _, enemy in pairs(Players:GetPlayers()) do
-        if enemy ~= Player and enemy.Character then
-            local espPart = enemy.Character:FindFirstChild("HumanoidRootPart")
-            if espPart then
-                local esp = Instance.new("BillboardGui")
-                esp.Parent = espPart
-                esp.Adornee = espPart
-                esp.Size = UDim2.new(0, 50, 0, 50)
-                esp.StudsOffset = Vector3.new(0, 2, 0)
-
-                local label = Instance.new("TextLabel")
-                label.Parent = esp
-                label.Size = UDim2.new(1, 0, 1, 0)
-                label.BackgroundTransparency = 1
-                label.Text = enemy.Name
-                label.TextColor3 = Color3.fromRGB(255, 0, 0)
-                label.TextSize = 14
-
-                -- Display ESP even through walls
-                esp.Enabled = esp_enabled
-            end
-        end
-    end
-end
-
 -- UI Integration (Kavo Library)
 local success, Library = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
@@ -237,7 +133,7 @@ if not success then
     warn("Failed to load Kavo UI Library:", Library)
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "Error",
-        Text = "UI library not supported by your executor.",
+        Text = "UI library failed to load: " .. tostring(Library),
         Duration = 5
     })
     return
@@ -272,7 +168,7 @@ local BladeBallSection = BladeBallTab:NewSection("Auto Parry Settings")
 BladeBallSection:NewToggle("Enable Auto Parry", "Toggle auto parry on or off", function(state)
     auto_parry_enabled = state
     if auto_parry_enabled then
-        task.spawn(AutoParry)
+        AutoParry()  -- Start the AutoParry loop
     end
 end)
 
