@@ -12,13 +12,11 @@ local Blatant_Tab = Library_Window.Create_Tab({
 -- Create a Section for the "Blatant" Tab
 local Blatant_Section = Blatant_Tab.Create_Section()
 
--- Create Auto Parry toggle
+-- Create Auto Parry toggle in Blatant tab
 local Auto_Parry = Blatant_Section.Create_DropToggle({
     name = 'Auto Parry',
     section = 'left',
-
     flag = 'Auto_Parry',
-
     options = {'Custom', 'Random', 'Backwards'},
     callback = function(state)
         if state then
@@ -29,7 +27,6 @@ local Auto_Parry = Blatant_Section.Create_DropToggle({
             -- Add logic for disabling Auto Parry feature here
         end
     end,
-
     callback2 = function(selected)
         print('Selected Auto Parry option:', selected)
     end
@@ -70,3 +67,92 @@ local BloxFruit_Slider = BloxFruit_Section.Create_Slider({
         print('Fruit Level:', value)
     end
 })
+
+-- Create a Tab for "Blade Ball"
+local BladeBall_Tab = Library_Window.Create_Tab({
+    name = 'Blade Ball',
+    icon = 'rbxassetid://'
+})
+
+-- Create a Section for the "Blade Ball" Tab
+local BladeBall_Section = BladeBall_Tab.Create_Section()
+
+-- Create Auto Parry toggle in Blade Ball tab
+local BladeBall_Auto_Parry = BladeBall_Section.Create_Toggle({
+    name = 'Enable Auto Parry',
+    flag = 'BladeBall_Enable_Auto_Parry',
+    callback = function(state)
+        if state then
+            print('Blade Ball Auto Parry Enabled')
+            -- Start the Auto Parry feature when enabled
+            auto_parry_enabled = true
+            AutoParry()  -- Start checking for balls to parry
+        else
+            print('Blade Ball Auto Parry Disabled')
+            -- Stop the Auto Parry feature when disabled
+            auto_parry_enabled = false
+        end
+    end
+})
+
+-- Slider to adjust the auto parry distance for Blade Ball
+local BladeBall_Parry_Distance = BladeBall_Section.Create_Slider({
+    name = 'Auto Parry Distance',
+    flag = 'BladeBall_Parry_Distance',
+    min = 1,
+    max = 50,
+    default = 10,
+    callback = function(value)
+        print('Auto Parry Distance:', value)
+        auto_parry_distance = value  -- Update the distance based on the slider
+    end
+})
+
+-- Slider for controlling parry spam speed
+local BladeBall_Spam_Speed = BladeBall_Section.Create_Slider({
+    name = 'Parry Spam Speed',
+    flag = 'BladeBall_Spam_Speed',
+    min = 0.1,
+    max = 1,
+    default = 0.5,
+    callback = function(value)
+        print('Parry Spam Speed:', value)
+        spam_speed = value  -- Update the spam speed based on the slider
+    end
+})
+
+-- Blade Ball Auto Parry Logic
+local auto_parry_enabled = false
+local auto_parry_distance = 10
+local spam_speed = 0.5
+local Balls = game:GetService("Workspace"):WaitForChild("Balls")
+local Camera = game:GetService("Workspace").CurrentCamera
+
+-- Function to trigger the parry (can be customized based on your game mechanics)
+local function Parry()
+    local ParryRemote = game.ReplicatedStorage:FindFirstChild("ParryButtonPress")
+    if ParryRemote then
+        ParryRemote:Fire()
+    else
+        print("Parry remote not found!")
+    end
+end
+
+-- Auto Parry Function (called when auto_parry_enabled is true)
+local function AutoParry()
+    while auto_parry_enabled do
+        for _, Ball in pairs(Balls:GetChildren()) do
+            -- Check if the ball is valid for parrying
+            if Ball:IsA("BasePart") and Ball:GetAttribute("realBall") == true then
+                local Distance = (Ball.Position - Camera.CFrame.p).Magnitude
+                local Velocity = (Ball.Position - Camera.CFrame.p).Magnitude / spam_speed
+                local TimeToImpact = Distance / Velocity
+
+                if Distance <= auto_parry_distance and TimeToImpact <= 1 then
+                    Parry() -- Trigger the auto parry action
+                end
+            end
+        end
+        task.wait(spam_speed)  -- Control how often we check for balls to parry
+    end
+end
