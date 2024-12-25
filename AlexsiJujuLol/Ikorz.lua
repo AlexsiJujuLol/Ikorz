@@ -1,215 +1,138 @@
+-- Load necessary services
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local workspace = game:GetService("Workspace")
+
+-- Load the Cloud UI Library
 local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/LuauCloud/Byte/refs/heads/main/Utils/Library.lua'))()
+local Library_Window = Library.Add_Window('Auto Parry Settings')
 
--- Create the main window
-local Library_Window = Library.Add_Window('Acceptions')
-
--- Create a Tab for "Blatant"
-local Blatant_Tab = Library_Window.Create_Tab({
-    name = 'Blatant',
-    icon = 'rbxassetid://'
-})
-
--- Create a Section for the "Blatant" Tab
-local Blatant_Section = Blatant_Tab.Create_Section()
-
--- Create Auto Parry toggle in Blatant tab
-local Auto_Parry = Blatant_Section.Create_DropToggle({
-    name = 'Auto Parry',
-    section = 'left',
-    flag = 'Auto_Parry',
-    options = {'Custom', 'Random', 'Backwards'},
-    callback = function(state)
-        if state then
-            print('Auto Parry Enabled')
-            -- Add logic for enabling Auto Parry feature here
-        else
-            print('Auto Parry Disabled')
-            -- Add logic for disabling Auto Parry feature here
-        end
-    end,
-    callback2 = function(selected)
-        print('Selected Auto Parry option:', selected)
-    end
-})
-
--- Create a Tab for "Blox Fruit"
-local BloxFruit_Tab = Library_Window.Create_Tab({
-    name = 'Blox Fruit',
-    icon = 'rbxassetid://'
-})
-
--- Create a Section for the "Blox Fruit" Tab
-local BloxFruit_Section = BloxFruit_Tab.Create_Section()
-
--- Create a Toggle for enabling/disabling Auto Fruit in Blox Fruit
-local Auto_Fruit_Toggle = BloxFruit_Section.Create_Toggle({
-    name = 'Enable Auto Fruit',
-    flag = 'Enable_Auto_Fruit',
-    callback = function(state)
-        if state then
-            print('Auto Fruit Enabled')
-            -- Add logic for enabling Auto Fruit here
-        else
-            print('Auto Fruit Disabled')
-            -- Add logic for disabling Auto Fruit here
-        end
-    end
-})
-
--- Example of a Slider in "Blox Fruit" tab for fruit level
-local BloxFruit_Slider = BloxFruit_Section.Create_Slider({
-    name = 'Fruit Level',
-    flag = 'Fruit_Level',
-    min = 1,
-    max = 100,
-    default = 1,
-    callback = function(value)
-        print('Fruit Level:', value)
-    end
-})
-
--- Create a Tab for "Blade Ball"
-local BladeBall_Tab = Library_Window.Create_Tab({
-    name = 'Blade Ball',
-    icon = 'rbxassetid://'
-})
-
--- Create a Section for the "Blade Ball" Tab
-local BladeBall_Section = BladeBall_Tab.Create_Section()
-
--- Create Auto Parry toggle in Blade Ball tab
-local BladeBall_Auto_Parry = BladeBall_Section.Create_Toggle({
-    name = 'Enable Auto Parry',
-    flag = 'BladeBall_Enable_Auto_Parry',
-    callback = function(state)
-        if state then
-            print('Blade Ball Auto Parry Enabled')
-            -- Start the Auto Parry feature when enabled
-            auto_parry_enabled = true
-            AutoParry()  -- Start checking for balls to parry
-        else
-            print('Blade Ball Auto Parry Disabled')
-            -- Stop the Auto Parry feature when disabled
-            auto_parry_enabled = false
-        end
-    end
-})
-
--- Slider to adjust the auto parry distance for Blade Ball
-local BladeBall_Parry_Distance = BladeBall_Section.Create_Slider({
-    name = 'Auto Parry Distance',
-    flag = 'BladeBall_Parry_Distance',
-    min = 1,
-    max = 50,
-    default = 10,
-    callback = function(value)
-        print('Auto Parry Distance:', value)
-        auto_parry_distance = value  -- Update the distance based on the slider
-    end
-})
-
--- Slider for controlling parry spam speed
-local BladeBall_Spam_Speed = BladeBall_Section.Create_Slider({
-    name = 'Parry Spam Speed',
-    flag = 'BladeBall_Spam_Speed',
-    min = 0.1,
-    max = 1,
-    default = 0.5,
-    callback = function(value)
-        print('Parry Spam Speed:', value)
-        spam_speed = value  -- Update the spam speed based on the slider
-    end
-})
-
--- Blade Ball Auto Parry Logic
+-- Variables for Auto Parry
 local auto_parry_enabled = false
 local auto_parry_distance = 10
-local spam_speed = 0.5
-local Balls = game:GetService("Workspace"):WaitForChild("Balls")
-local Camera = game:GetService("Workspace").CurrentCamera
+local show_parry_circle = false
+local parry_circle = nil
 
--- Function to trigger the parry (can be customized based on your game mechanics)
-local function Parry()
-    local ParryRemote = game.ReplicatedStorage:FindFirstChild("ParryButtonPress")
-    if ParryRemote then
-        ParryRemote:Fire()
-    else
-        print("Parry remote not found!")
-    end
-end
-
--- Auto Parry Function (called when auto_parry_enabled is true)
-local function AutoParry()
-    while auto_parry_enabled do
-        for _, Ball in pairs(Balls:GetChildren()) do
-            -- Check if the ball is valid for parrying
-            if Ball:IsA("BasePart") and Ball:GetAttribute("realBall") == true then
-                local Distance = (Ball.Position - Camera.CFrame.p).Magnitude
-                local Velocity = (Ball.Position - Camera.CFrame.p).Magnitude / spam_speed
-                local TimeToImpact = Distance / Velocity
-
-                if Distance <= auto_parry_distance and TimeToImpact <= 1 then
-                    Parry() -- Trigger the auto parry action
-                end
-            end
+-- Function to update the parry circle's position and size
+local function UpdateParryCircle()
+    if not show_parry_circle then
+        if parry_circle then
+            parry_circle:Destroy()
+            parry_circle = nil
         end
-        task.wait(spam_speed)  -- Control how often we check for balls to parry
+        return
+    end
+
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
+
+    if not parry_circle then
+        parry_circle = Instance.new("Part")
+        parry_circle.Shape = Enum.PartType.Cylinder
+        parry_circle.Anchored = true
+        parry_circle.CanCollide = false
+        parry_circle.Transparency = 0.5
+        parry_circle.Material = Enum.Material.Neon
+        parry_circle.Color = Color3.new(1, 0, 0)
+        parry_circle.Parent = workspace
+    end
+
+    parry_circle.Size = Vector3.new(0.2, auto_parry_distance * 2, auto_parry_distance * 2)
+    parry_circle.CFrame = CFrame.new(player.Character.HumanoidRootPart.Position) * CFrame.Angles(math.pi / 2, 0, 0)
+end
+
+-- Function to continuously update the parry circle's position
+local function UpdateCirclePosition()
+    while auto_parry_enabled and show_parry_circle do
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            parry_circle.Position = player.Character.HumanoidRootPart.Position
+        end
+        task.wait(0.05)
     end
 end
 
--- Create a Tab for "Arsenal"
-local Arsenal_Tab = Library_Window.Create_Tab({
-    name = 'Arsenal',
-    icon = 'rbxassetid://'
-})
+-- Function to automatically parry balls
+local function AutoParryBall()
+    while auto_parry_enabled do
+        if not player.Character then return end
 
--- Create a Section for the "Arsenal" Tab
-local Arsenal_Section = Arsenal_Tab.Create_Section()
+        local character = player.Character
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
 
--- Silent Aim Toggle in Arsenal tab
-local silent_aim_enabled = false
-
-local function Aimbot()
-    while silent_aim_enabled do
-        local closestEnemy = nil
-        local closestDistance = math.huge
-        for _, enemy in ipairs(game.Players:GetPlayers()) do
-            if enemy.Character and enemy ~= game.Players.LocalPlayer then
-                local humanoidRootPart = enemy.Character:FindFirstChild("HumanoidRootPart")
-                if humanoidRootPart then
-                    local distance = (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - humanoidRootPart.Position).Magnitude
-                    if distance < closestDistance then
-                        closestDistance = distance
-                        closestEnemy = enemy
+        if rootPart then
+            for _, ball in pairs(workspace:GetChildren()) do
+                if ball.Name == "Ball" and ball:IsA("Part") then
+                    local distance = (ball.Position - rootPart.Position).Magnitude
+                    if distance <= auto_parry_distance then
+                        -- Simulate a parry by applying a force to the ball
+                        local bodyVelocity = Instance.new("BodyVelocity")
+                        bodyVelocity.MaxForce = Vector3.new(10000, 10000, 10000)
+                        bodyVelocity.Velocity = (ball.Position - rootPart.Position).unit * 100
+                        bodyVelocity.Parent = ball
+                        game:GetService("Debris"):AddItem(bodyVelocity, 0.5) -- Cleanup after 0.5 seconds
+                        print("Parried a ball!")
                     end
                 end
             end
         end
-
-        if closestEnemy then
-            local targetPosition = closestEnemy.Character.HumanoidRootPart.Position
-            local camera = workspace.CurrentCamera
-            local direction = (targetPosition - camera.CFrame.p).unit
-            local newCFrame = camera.CFrame * CFrame.new(direction * 100) -- silent aim adjustment
-            camera.CFrame = CFrame.lookAt(camera.CFrame.p, newCFrame.p)
-        end
-
-        wait(0.1)
+        task.wait(0.1)
     end
 end
 
--- Silent Aim Toggle UI
-local SilentAim_Toggle = Arsenal_Section.Create_Toggle({
-    name = 'Enable Silent Aim',
-    flag = 'Enable_Silent_Aim',
-    callback = function(state)
-        silent_aim_enabled = state
-        if silent_aim_enabled then
-            print('Silent Aim Enabled')
-            -- Start the Aimbot loop
-            task.spawn(Aimbot)
-        else
-            print('Silent Aim Disabled')
+-- Function to toggle auto parry
+local function ToggleAutoParry(state)
+    auto_parry_enabled = state
+    if state then
+        -- Start updating circle position and parrying balls
+        task.spawn(UpdateCirclePosition)
+        task.spawn(AutoParryBall)
+    else
+        if parry_circle then
+            parry_circle:Destroy()  -- Remove parry circle when disabled
+            parry_circle = nil
         end
     end
+end
+
+-- Cloud UI Tab Creation
+local BladeBall_Tab = Library_Window.Create_Tab({name = 'Blade Ball', icon = 'rbxassetid://6023426975'})
+
+-- Section for Auto Parry Settings
+local BladeBall_Section = BladeBall_Tab.Create_Section({name = 'Auto Parry Settings'})
+
+-- Toggle for Auto Parry
+BladeBall_Section.Create_Toggle({
+    name = 'Enable Auto Parry',
+    flag = 'Auto_Parry',
+    callback = function(state)
+        ToggleAutoParry(state)
+    end
 })
+
+-- Slider to adjust parry distance
+BladeBall_Section.Create_Slider({
+    name = 'Parry Distance',
+    flag = 'Parry_Distance',
+    min = 5,
+    max = 50,
+    default = auto_parry_distance,
+    callback = function(value)
+        auto_parry_distance = value
+        UpdateParryCircle()  -- Update the circle whenever the distance changes
+    end
+})
+
+-- Toggle to show or hide the parry circle
+BladeBall_Section.Create_Toggle({
+    name = 'Show Parry Circle',
+    flag = 'Show_Parry_Circle',
+    callback = function(state)
+        show_parry_circle = state
+        UpdateParryCircle()  -- Update the circle's visibility
+    end
+})
+
+-- Finalize the UI setup
+Library_Window:Show()
+
+print("Auto Parry UI Loaded! Press the button to toggle.")
