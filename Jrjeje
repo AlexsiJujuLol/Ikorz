@@ -44,73 +44,77 @@ local run_service = game:GetService("RunService")
 -- Rayfield UI elements
 local Tab = Window:CreateTab("Aimbot", 4483362458)
 
--- Toggle for Aimbot
+-- Create the Toggle for Aimbot
 local aimbotToggle = Tab:CreateToggle({
-   Name = "Enable Aimbot",
-   CurrentValue = getgenv().aimbot_enabled,
-   Callback = function(value)
-       getgenv().aimbot_enabled = value
-   end
+    Name = "Enable Aimbot",
+    CurrentValue = getgenv().aimbot_enabled,
+    Callback = function(value)
+        getgenv().aimbot_enabled = value
+    end
 })
 
+-- Function to get closest player
 local function getClosestPlayer()
-   local closest_player = nil
-   local closest_distance = math.huge
-   local local_player = players_service.LocalPlayer
-   local camera = workspace.CurrentCamera
+    local closest_player = nil
+    local closest_distance = math.huge
+    local local_player = players_service.LocalPlayer
+    local camera = workspace.CurrentCamera
 
-   for _, player in ipairs(players_service:GetPlayers()) do
-       if player == local_player then continue end
-       if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then continue end
+    for _, player in ipairs(players_service:GetPlayers()) do
+        if player == local_player then continue end
+        if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then continue end
 
-       local target = player.Character:FindFirstChild("HumanoidRootPart")
-       if target then
-           local position, on_screen = camera:WorldToViewportPoint(target.Position)
-           if on_screen then
-               local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-               local distance = (center - Vector2.new(position.X, position.Y)).Magnitude
-               if distance < closest_distance then
-                   closest_player = player
-                   closest_distance = distance
-               end
-           end
-       end
-   end
+        local target = player.Character:FindFirstChild("HumanoidRootPart")
+        if target then
+            local position, on_screen = camera:WorldToViewportPoint(target.Position)
+            if on_screen then
+                local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+                local distance = (center - Vector2.new(position.X, position.Y)).Magnitude
+                if distance < closest_distance then
+                    closest_player = player
+                    closest_distance = distance
+                end
+            end
+        end
+    end
 
-   return closest_player
+    return closest_player
 end
 
+-- Function to aim at the closest player
 local function aimAtPlayer(player)
-   if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-       local aim_part = player.Character["HumanoidRootPart"]
-       local camera = workspace.CurrentCamera
-       local aim_position = aim_part.Position
-       local camera_position = camera.CFrame.Position
-       local direction = (aim_position - camera_position).unit
+    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local aim_part = player.Character["HumanoidRootPart"]
+        local camera = workspace.CurrentCamera
+        local aim_position = aim_part.Position
+        local camera_position = camera.CFrame.Position
+        local direction = (aim_position - camera_position).unit
 
-       -- Smooth aimbot aiming (if smoothness is greater than 0)
-       if getgenv().aimbot_smoothness > 0 then
-           local new_cframe = camera.CFrame:Lerp(CFrame.new(camera_position, aim_position), getgenv().aimbot_smoothness)
-           camera.CFrame = new_cframe
-       else
-           camera.CFrame = CFrame.new(camera_position, aim_position)
-       end
-   end
+        -- Smooth aimbot aiming (if smoothness is greater than 0)
+        if getgenv().aimbot_smoothness > 0 then
+            local new_cframe = camera.CFrame:Lerp(CFrame.new(camera_position, aim_position), getgenv().aimbot_smoothness)
+            camera.CFrame = new_cframe
+        else
+            camera.CFrame = CFrame.new(camera_position, aim_position)
+        end
+    end
 end
 
+-- Toggle to start/stop aimbot on right mouse click
 user_input_service.InputBegan:Connect(function(input)
-   if input.UserInputType == Enum.UserInputType.MouseButton2 then
-       getgenv().aimbot_enabled = not getgenv().aimbot_enabled
-   end
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        getgenv().aimbot_enabled = not getgenv().aimbot_enabled
+    end
 end)
 
+-- Update the aimbot target continuously
 run_service.RenderStepped:Connect(function()
-   if getgenv().aimbot_enabled then
-       local closest_player = getClosestPlayer()
-       if closest_player then
-           aimAtPlayer(closest_player)
-       end
-   end
+    if getgenv().aimbot_enabled then
+        local closest_player = getClosestPlayer()
+        if closest_player then
+            aimAtPlayer(closest_player)
+        end
+    end
 end)
 
 -- Load the configuration to show the UI
