@@ -34,12 +34,24 @@ local Window = Rayfield:CreateWindow({
 
 -- Aimbot settings
 getgenv().aimbot_enabled = true
-getgenv().aimbot_smoothness = 0 -- You can adjust smoothness if needed (0 for instant)
+getgenv().aimbot_smoothness = 0 -- Smoothness of the aimbot (0 = instant)
 getgenv().noclip_enabled = false
 
 local user_input_service = game:GetService("UserInputService")
 local players_service = game:GetService("Players")
 local run_service = game:GetService("RunService")
+
+-- Rayfield UI elements
+local Tab = Window:CreateTab("Aimbot", 4483362458)
+
+-- Toggle for Aimbot
+local aimbotToggle = Tab:CreateToggle({
+   Name = "Enable Aimbot",
+   CurrentValue = getgenv().aimbot_enabled,
+   Callback = function(value)
+       getgenv().aimbot_enabled = value
+   end
+})
 
 local function getClosestPlayer()
    local closest_player = nil
@@ -76,7 +88,7 @@ local function aimAtPlayer(player)
        local camera_position = camera.CFrame.Position
        local direction = (aim_position - camera_position).unit
 
-       -- Adjusts CFrame to aim at target smoothly if enabled
+       -- Smooth aimbot aiming (if smoothness is greater than 0)
        if getgenv().aimbot_smoothness > 0 then
            local new_cframe = camera.CFrame:Lerp(CFrame.new(camera_position, aim_position), getgenv().aimbot_smoothness)
            camera.CFrame = new_cframe
@@ -101,5 +113,5 @@ run_service.RenderStepped:Connect(function()
    end
 end)
 
--- Load the configuration
+-- Load the configuration to show the UI
 Rayfield:LoadConfiguration()
