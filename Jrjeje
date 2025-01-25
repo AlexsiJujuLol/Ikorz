@@ -1,121 +1,78 @@
--- Initialize Rayfield UI
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- Silent Aim settings
+getgenv().enabled = true
+getgenv().aimpart = "HumanoidRootPart" -- Default aim part is "HumanoidRootPart"
 
-local Window = Rayfield:CreateWindow({
-   Name = "Ikorz Hub",
-   Icon = 0, 
-   LoadingTitle = "Rayfield Interface Suite",
-   LoadingSubtitle = "by Ikorz",
-   Theme = "Default",
+local replicated_storage = game:GetService("ReplicatedStorage")
+local players = game:GetService("Players")
+local camera = workspace.CurrentCamera
+local utility = require(replicated_storage:FindFirstChild("Modules").Utility)
 
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = nil,
-      FileName = "Ikorz_Hub"
-   },
-
-   Discord = {
-      Enabled = false,
-      Invite = "noinvitelink",
-      RememberJoins = true
-   },
-
-   KeySystem = false,
-   KeySettings = {
-      Title = "Untitled",
-      Subtitle = "Key System",
-      Note = "No method of obtaining the key is provided",
-      FileName = "Key",
-      SaveKey = true,
-      GrabKeyFromSite = false,
-      Key = {"Hello"}
-   }
-})
-
--- Aimbot settings
-getgenv().aimbot_enabled = true
-getgenv().aimbot_smoothness = 0 -- Smoothness of the aimbot (0 = instant)
-getgenv().noclip_enabled = false
-
-local user_input_service = game:GetService("UserInputService")
-local players_service = game:GetService("Players")
-local run_service = game:GetService("RunService")
-
--- Rayfield UI elements
-local Tab = Window:CreateTab("Aimbot", 4483362458)
-
--- Create the Toggle for Aimbot
-local aimbotToggle = Tab:CreateToggle({
-    Name = "Enable Aimbot",
-    CurrentValue = getgenv().aimbot_enabled,
-    Callback = function(value)
-        getgenv().aimbot_enabled = value
-    end
-})
-
--- Function to get closest player
-local function getClosestPlayer()
-    local closest_player = nil
-    local closest_distance = math.huge
-    local local_player = players_service.LocalPlayer
-    local camera = workspace.CurrentCamera
-
-    for _, player in ipairs(players_service:GetPlayers()) do
-        if player == local_player then continue end
-        if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then continue end
-
-        local target = player.Character:FindFirstChild("HumanoidRootPart")
-        if target then
-            local position, on_screen = camera:WorldToViewportPoint(target.Position)
-            if on_screen then
-                local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-                local distance = (center - Vector2.new(position.X, position.Y)).Magnitude
-                if distance < closest_distance then
-                    closest_player = player
-                    closest_distance = distance
+-- Function to get all players and entities
+local function getPlayersOrEntities()
+    local entities = {}
+    for _, child in ipairs(workspace:GetChildren()) do
+        if child:FindFirstChildOfClass("Humanoid") then
+            table.insert(entities, child)
+        elseif child.Name == "HurtEffect" then
+            for _, hurtPlayer in ipairs(child:GetChildren()) do
+                if hurtPlayer.ClassName ~= "Highlight" then
+                    table.insert(entities, hurtPlayer)
                 end
             end
         end
     end
-
-    return closest_player
+    return entities
 end
 
--- Function to aim at the closest player
-local function aimAtPlayer(player)
-    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local aim_part = player.Character["HumanoidRootPart"]
-        local camera = workspace.CurrentCamera
-        local aim_position = aim_part.Position
-        local camera_position = camera.CFrame.Position
-        local direction = (aim_position - camera_position).unit
-
-        -- Smooth aimbot aiming (if smoothness is greater than 0)
-        if getgenv().aimbot_smoothness > 0 then
-            local new_cframe = camera.CFrame:Lerp(CFrame.new(camera_position, aim_position), getgenv().aimbot_smoothness)
-            camera.CFrame = new_cframe
-        else
-            camera.CFrame = CFrame.new(camera_position, aim_position)
-        end
+-- Function to check if a player is an enemy
+local function isEnemy(player)
+    if not getgenv().teamcheck then
+        return true
     end
+    return player.Team ~= players.LocalPlayer.Team
 end
 
--- Toggle to start/stop aimbot on right mouse click
-user_input_service.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        getgenv().aimbot_enabled = not getgenv().aimbot_enabled
-    end
-end)
+-- Function to get the closest player to aim at
+local function getClosestPlayer()
+    if not getgenv().enabled then return nil end
 
--- Update the aimbot target continuously
-run_service.RenderStepped:Connect(function()
-    if getgenv().aimbot_enabled then
-        local closest_player = getClosestPlayer()
-        if closest_player then
-            aimAtPlayer(closest_player)
+    local closest, closestDistance = nil, math.huge
+    local localPlayer = players.LocalPlayer
+    local character = localPlayer.Character
+
+    if not character then return nil end
+
+    for _, player in ipairs(getPlayersOrEntities()) do
+        if player == localPlayer then continue end
+        if not player:FindFirstChild(getgenv().aimpart) then continue end
+        if not isEnemy(player) then continue end
+
+        local position, onScreen = camera:WorldToViewportPoint(player[getgenv().aimpart].Position)
+        if not onScreen then continue end
+
+        local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+        local distance = (center - Vector2.new(position.X, position.Y)).Magnitude
+
+        if distance < closestDistance then
+            closest = player
+            closestDistance = distance
         end
     end
-end)
 
--- Load the configuration to show the UI
-Rayfield:LoadConfiguration()
+    return closest
+end
+
+-- Raycast function to apply silent aim
+local oldRaycast = utility.Raycast
+utility.Raycast = function(...)
+    local arguments = { ... }
+
+    if #arguments > 0 and arguments[4] == 999 then
+        local closest = getClosestPlayer()
+        if closest then
+            arguments[3] = closest[getgenv().aimpart].Position
+        end
+    end
+
+    return oldRaycast(table.unpack(arguments))
+end
