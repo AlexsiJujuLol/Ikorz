@@ -32,135 +32,14 @@ local Window = Rayfield:CreateWindow({
    }
 })
 
--- Aimbot and ESP settings
+-- Aimbot settings
 getgenv().aimbot_enabled = true
-getgenv().aimbot_smoothness = 0
-getgenv().show_boxes_enabled = true
-getgenv().show_tracers_enabled = true
-getgenv().show_names_enabled = true
-getgenv().show_skeleton_enabled = true
-getgenv().visuals_enabled = true
+getgenv().aimbot_smoothness = 0 -- You can adjust smoothness if needed (0 for instant)
 getgenv().noclip_enabled = false
 
 local user_input_service = game:GetService("UserInputService")
 local players_service = game:GetService("Players")
 local run_service = game:GetService("RunService")
-local visual_elements = {}
-
--- Rayfield UI elements
-local Tab = Window:CreateTab("Aimbot & ESP", 4483362458)
-
-local Section = Tab:CreateSection("Aimbot Settings")
-
--- Toggle for Aimbot
-local aimbotToggle = Tab:CreateToggle({
-   Name = "Enable Aimbot",
-   CurrentValue = getgenv().aimbot_enabled,
-   Callback = function(value)
-       getgenv().aimbot_enabled = value
-   end
-})
-
--- Toggle for ESP
-local espToggle = Tab:CreateToggle({
-   Name = "Enable ESP",
-   CurrentValue = true,
-   Callback = function(value)
-       getgenv().visuals_enabled = value
-   end
-})
-
-local function createESP(player)
-   if player == players_service.LocalPlayer then return end
-   local character = player.Character or player.CharacterAdded:Wait()
-   local humanoid_root_part = character:WaitForChild("HumanoidRootPart")
-
-   local box_visual = Drawing.new("Square")
-   box_visual.Color = Color3.fromRGB(255, 255, 255)  -- White ESP Box
-   box_visual.Thickness = 2
-   box_visual.Transparency = 1
-   box_visual.Filled = false
-
-   local tracer_visual = Drawing.new("Line")
-   tracer_visual.Color = Color3.fromRGB(255, 255, 255)  -- White ESP Tracers
-   tracer_visual.Thickness = 1
-   tracer_visual.Transparency = 1
-
-   local name_visual = Drawing.new("Text")
-   name_visual.Text = player.Name
-   name_visual.Color = Color3.fromRGB(255, 255, 255)  -- White ESP Text
-   name_visual.Size = 20
-   name_visual.Center = true
-   name_visual.Outline = true
-   name_visual.Transparency = 1
-
-   local skeleton_lines = {}
-   for i = 1, 6 do
-       local line = Drawing.new("Line")
-       line.Color = Color3.fromRGB(255, 255, 255)  -- White Skeleton
-       line.Thickness = 2.5
-       line.Transparency = 1
-       table.insert(skeleton_lines, line)
-   end
-
-   visual_elements[player] = {
-       box = box_visual,
-       tracer = tracer_visual,
-       name = name_visual,
-       skeleton = skeleton_lines
-   }
-end
-
-local function updateESP()
-   for player, visuals in pairs(visual_elements) do
-       if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
-           visuals.box.Visible = false
-           visuals.tracer.Visible = false
-           visuals.name.Visible = false
-           for _, line in pairs(visuals.skeleton) do
-               line.Visible = false
-           end
-           return
-       end
-
-       local humanoid_root_part = player.Character:FindFirstChild("HumanoidRootPart")
-       if humanoid_root_part then
-           local hrp_position, on_screen = workspace.CurrentCamera:WorldToViewportPoint(humanoid_root_part.Position)
-           if on_screen then
-               local top = workspace.CurrentCamera:WorldToViewportPoint(humanoid_root_part.Position + Vector3.new(0, 3, 0))
-               local bottom = workspace.CurrentCamera:WorldToViewportPoint(humanoid_root_part.Position - Vector3.new(0, 3, 0))
-               local size = Vector2.new(math.abs(top.X - bottom.X) * 1.5, math.abs(top.Y - bottom.Y) * 1.5)
-
-               if getgenv().show_boxes_enabled then
-                   visuals.box.Size = size
-                   visuals.box.Position = Vector2.new(hrp_position.X - size.X / 2, hrp_position.Y - size.Y / 2)
-                   visuals.box.Visible = true
-               end
-
-               if getgenv().show_tracers_enabled then
-                   visuals.tracer.From = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y)
-                   visuals.tracer.To = Vector2.new(hrp_position.X, hrp_position.Y)
-                   visuals.tracer.Visible = true
-               end
-
-               if getgenv().show_names_enabled then
-                   visuals.name.Position = Vector2.new(hrp_position.X, hrp_position.Y - size.Y / 2 - 20)
-                   visuals.name.Visible = true
-               end
-
-               if getgenv().show_skeleton_enabled then
-                   local head_pos = workspace.CurrentCamera:WorldToViewportPoint(player.Character:FindFirstChild("Head").Position)
-                   local torso_pos = workspace.CurrentCamera:WorldToViewportPoint(player.Character:FindFirstChild("Torso").Position)
-                   visuals.skeleton[1].From = Vector2.new(head_pos.X, head_pos.Y)
-                   visuals.skeleton[1].To = Vector2.new(torso_pos.X, torso_pos.Y)
-                   visuals.skeleton[1].Visible = true
-               end
-           end
-       end
-   end
-end
-
-run_service.RenderStepped:Connect(updateESP)
 
 local function getClosestPlayer()
    local closest_player = nil
@@ -197,7 +76,13 @@ local function aimAtPlayer(player)
        local camera_position = camera.CFrame.Position
        local direction = (aim_position - camera_position).unit
 
-       camera.CFrame = CFrame.new(camera_position, aim_position)
+       -- Adjusts CFrame to aim at target smoothly if enabled
+       if getgenv().aimbot_smoothness > 0 then
+           local new_cframe = camera.CFrame:Lerp(CFrame.new(camera_position, aim_position), getgenv().aimbot_smoothness)
+           camera.CFrame = new_cframe
+       else
+           camera.CFrame = CFrame.new(camera_position, aim_position)
+       end
    end
 end
 
@@ -214,14 +99,6 @@ run_service.RenderStepped:Connect(function()
            aimAtPlayer(closest_player)
        end
    end
-end)
-
-for _, player in pairs(players_service:GetPlayers()) do
-   createESP(player)
-end
-
-players_service.PlayerAdded:Connect(function(player)
-   createESP(player)
 end)
 
 -- Load the configuration
