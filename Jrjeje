@@ -1,13 +1,11 @@
--- Silent Aim settings
 getgenv().enabled = true
-getgenv().aimpart = "HumanoidRootPart" -- Default aim part is "HumanoidRootPart"
+getgenv().aimpart = "HumanoidRootPart"
 
 local replicated_storage = game:GetService("ReplicatedStorage")
 local players = game:GetService("Players")
 local camera = workspace.CurrentCamera
 local utility = require(replicated_storage:FindFirstChild("Modules").Utility)
 
--- Function to get all players and entities
 local function getPlayersOrEntities()
     local entities = {}
     for _, child in ipairs(workspace:GetChildren()) do
@@ -24,7 +22,6 @@ local function getPlayersOrEntities()
     return entities
 end
 
--- Function to check if a player is an enemy
 local function isEnemy(player)
     if not getgenv().teamcheck then
         return true
@@ -32,7 +29,6 @@ local function isEnemy(player)
     return player.Team ~= players.LocalPlayer.Team
 end
 
--- Function to get the closest player to aim at
 local function getClosestPlayer()
     if not getgenv().enabled then return nil end
 
@@ -62,7 +58,6 @@ local function getClosestPlayer()
     return closest
 end
 
--- Raycast function to apply silent aim
 local oldRaycast = utility.Raycast
 utility.Raycast = function(...)
     local arguments = { ... }
