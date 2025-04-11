@@ -7,17 +7,29 @@ if not getgenv().AutoDribbleSettings then
 end
 
 local Settings = getgenv().AutoDribbleSettings
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local BallService = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("BallService"):WaitForChild("RE"):WaitForChild("Dribble")
-local AnimationsModule = require(ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Animations"))
 
-local Character, HRP, Humanoid
-local function getCharacter()
+local Players = game:GetService("Players") --../:/Players - ikorz
+local ReplicatedStorage = game:GetService("ReplicatedStorage") --../:/Storage - ikorz
+local RunService = game:GetService("RunService") --../:/Run - ikorz
+
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait() --../:/Local - ikorz
+
+local function waitForService(path) --../:/WFS - ikorz
+    local node = ReplicatedStorage
+    for part in string.gmatch(path, "[^%.]+") do
+        node = node:WaitForChild(part)
+    end
+    return node
+end
+
+local BallService = waitForService("Packages.Knit.Services.BallService.RE.Dribble") --../:/Ball - ikorz
+local AnimationsModule = require(waitForService("Assets.Animations")) --../:/Anim - ikorz
+
+local Character, HRP, Humanoid --../:/CharBase - ikorz
+local function getCharacter() --../:/getChar - ikorz
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    return char, char:WaitForChild("HumanoidRootPart"), char:WaitForChild("Humanoid")
+    repeat task.wait() until char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid")
+    return char, char:FindFirstChild("HumanoidRootPart"), char:FindFirstChild("Humanoid")
 end
 
 Character, HRP, Humanoid = getCharacter()
@@ -25,16 +37,17 @@ LocalPlayer.CharacterAdded:Connect(function()
     Character, HRP, Humanoid = getCharacter()
 end)
 
-local function loadDribbleAnimation(style)
+local function loadDribbleAnimation(style) --../:/AnimLoad - ikorz
     local animId = AnimationsModule.Dribbles and AnimationsModule.Dribbles[style]
     if animId then
         local anim = Instance.new("Animation")
         anim.AnimationId = animId
-        return Humanoid:LoadAnimation(anim)
+        local loaded = Humanoid:LoadAnimation(anim)
+        return loaded
     end
 end
 
-local function isOpponentSliding(player)
+local function isOpponentSliding(player) --../:/SlideCheck - ikorz
     if player ~= LocalPlayer and player.Character then
         local char = player.Character
         local sliding = char:FindFirstChild("Values") and char.Values:FindFirstChild("Sliding")
@@ -43,12 +56,12 @@ local function isOpponentSliding(player)
     end
 end
 
-local function isOpponent(player)
+local function isOpponent(player) --../:/IsEnemy - ikorz
     return LocalPlayer.Team and player.Team and LocalPlayer.Team ~= player.Team
 end
 
 local lastDribbleTime = 0
-local function autoDribble(distance)
+local function autoDribble(distance) --../:/AutoD - ikorz
     if not (Settings.Enabled and Character and Character:FindFirstChild("Values")) then return end
     if not Character.Values:FindFirstChild("HasBall") or not Character.Values.HasBall.Value then return end
 
@@ -74,7 +87,7 @@ local function autoDribble(distance)
     end
 end
 
-RunService.Heartbeat:Connect(function()
+RunService.Heartbeat:Connect(function() --../:/Loop - ikorz
     if not (Settings.Enabled and Character and HRP) then return end
 
     for _, player in ipairs(Players:GetPlayers()) do
